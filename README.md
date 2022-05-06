@@ -1,4 +1,4 @@
 # BARK
 BloodHound Attack Research Kit
 
-[Imgur](https://imgur.com/skPLO7U)
+[img]https://i.imgur.com/skPLO7U.jpg[/img]
