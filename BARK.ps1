@@ -4374,8 +4374,6 @@ Function Get-AllAzureRMSubscriptions {
 
 }
 
-$Subs = Get-AllAzureRMSubscriptions -Token $mytoken
-
 Function ConvertTo-Markdown {
     <#
     .Synopsis
