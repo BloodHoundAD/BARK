@@ -3,7 +3,7 @@
 # License: GPLv3
 # Threaded functions require PowerShell 7+
 
-function Parse-JWTToken {
+Function Parse-JWTToken {
     <#
     .DESCRIPTION
     Decodes a JWT token.
@@ -65,6 +65,7 @@ function Parse-JWTToken {
 
     Write-Output $output
 }
+
 New-Variable -Name 'Parse-JWTTokenDefinition' -Value (Get-Command -Name "Parse-JWTToken") -Force
 New-Variable -Name 'Parse-JWTTokenAst' -Value (${Parse-JWTTokenDefinition}.ScriptBlock.Ast.Body) -Force
 
@@ -151,7 +152,7 @@ Function Get-MSGraphTokenWithRefreshToken {
     .DESCRIPTION
     Supplies a refresh token to the STS, requesting an MS Graph-scoped JWT
 
-    Based on RefreshTo-MSGraphToken by Steve Borosh (@424f424f)
+    Based on RefreshTo-MSGraphToken by Steve Borosh (@424f424f) - https://github.com/rvrsh3ll/TokenTactics
     #>
     [cmdletbinding()]
     param(
@@ -186,7 +187,7 @@ Function Get-MSGraphTokenWithPortalAuthRefreshToken {
     .DESCRIPTION
     Supplies a Portal Auth Refresh Token to the Azure Portal DelegationToken endpoint and requests an MS Graph-scoped JWT
 
-    Based on Token Tactics by Steve Borosh (@424f424f)
+    Based on Token Tactics by Steve Borosh (@424f424f) - https://github.com/rvrsh3ll/TokenTactics
     #>
     [cmdletbinding()]
     param(
@@ -237,7 +238,7 @@ Function Get-ARMTokenWithPortalAuthRefreshToken {
     .DESCRIPTION
     Supplies a Portal Auth Refresh Token to the Azure Portal DelegationToken endpoint and requests an AzureRM-scoped JWT
 
-    Based on Token Tactics by Steve Borosh (@424f424f)
+    Based on Token Tactics by Steve Borosh (@424f424f) - https://github.com/rvrsh3ll/TokenTactics
     #>
     [cmdletbinding()]
     param(
@@ -321,7 +322,7 @@ Function Get-ARMTokenWithRefreshToken {
     .DESCRIPTION
     Supplies a refresh token to the STS, requesting an AzureRM-scoped JWT
 
-    Based on RefreshTo-AzureCoreManagementToken by Steve Borosh (@424f424f)
+    Based on RefreshTo-AzureCoreManagementToken by Steve Borosh (@424f424f) - https://github.com/rvrsh3ll/TokenTactics
     #>
     [cmdletbinding()]
     param(
@@ -356,9 +357,7 @@ Function Get-AzurePortalTokenWithRefreshToken {
     .DESCRIPTION
     Supplies a refresh token to the STS, requesting an Azure Portal-scoped JWT
 
-    Based on Token Tactics by Steve Borosh (@424f424f)
-
-    https://github.com/AzureAD/azure-activedirectory-library-for-nodejs/issues/128
+    Based on Token Tactics by Steve Borosh (@424f424f) - https://github.com/rvrsh3ll/TokenTactics
     #>
     [cmdletbinding()]
     param(
@@ -388,7 +387,7 @@ Function Get-AzurePortalTokenWithRefreshToken {
 New-Variable -Name 'Get-AzurePortalTokenWithRefreshTokenDefinition' -Value (Get-Command -Name "Get-AzurePortalTokenWithRefreshToken") -Force
 New-Variable -Name 'Get-AzurePortalTokenWithRefreshTokenAst' -Value (${Get-AzurePortalTokenWithRefreshTokenDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Set-AZUserPassword {
+Function Set-AZUserPassword {
     <#
     .SYNOPSIS
         Attempts to set an AzureAD user password to a provided value. Returns the raw payload from the Graph API.
@@ -467,7 +466,7 @@ function Set-AZUserPassword {
 
 }
 
-function Reset-AZUserPassword {
+Function Reset-AZUserPassword {
     <#
     .SYNOPSIS
         Attempts to reset an AzureAD user password. If successful, returns the new temporary password for the user.
@@ -527,7 +526,7 @@ function Reset-AZUserPassword {
 
 }
 
-function Get-AzureRMRoleDefinitions {
+Function Get-AzureRMRoleDefinitions {
     <#
     .SYNOPSIS
         Gets the current list of available AzureRM roles
@@ -600,7 +599,7 @@ function Get-AzureRMRoleDefinitions {
     }
 }
 
-function New-AzureRMRoleAssignment {
+Function New-AzureRMRoleAssignment {
     <#
     .SYNOPSIS
         Grant an AzureRM role assignment to a principal
@@ -717,7 +716,7 @@ function New-AzureRMRoleAssignment {
 New-Variable -Name 'New-AzureRMRoleAssignmentDefinition' -Value (Get-Command -Name "New-AzureRMRoleAssignment") -Force
 New-Variable -Name 'New-AzureRMRoleAssignmentAst' -Value (${New-AzureRMRoleAssignmentDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-AzureRMAddSelfToAzureRMRole {
+Function Test-AzureRMAddSelfToAzureRMRole {
     <#
     .SYNOPSIS
         Tests whether a principal can grant itself an AzureRM role
@@ -889,7 +888,7 @@ function Test-AzureRMAddSelfToAzureRMRole {
 New-Variable -Name 'Test-AzureRMAddSelfToAzureRMRoleDefinition' -Value (Get-Command -Name "Test-AzureRMAddSelfToAzureRMRole") -Force
 New-Variable -Name 'Test-AzureRMAddSelfToAzureRMRoleAst' -Value (${Test-AzureRMAddSelfToAzureRMRoleDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-AzureRMVMRunCommand {
+Function Test-AzureRMVMRunCommand {
     <#
     .SYNOPSIS
         Tests whether a principal can run a SYSTEM command via the runCommand endpoint
@@ -1017,7 +1016,7 @@ function Test-AzureRMVMRunCommand {
 New-Variable -Name 'Test-AzureRMVMRunCommandDefinition' -Value (Get-Command -Name "Test-AzureRMVMRunCommand") -Force
 New-Variable -Name 'Test-AzureRMVMRunCommandAst' -Value (${Test-AzureRMVMRunCommandDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-AzureRMPublishAutomationAccountRunBook {
+Function Test-AzureRMPublishAutomationAccountRunBook {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can publish a new runbook to an existing automation account
@@ -1194,7 +1193,7 @@ function Test-AzureRMPublishAutomationAccountRunBook {
 New-Variable -Name 'Test-AzureRMPublishAutomationAccountRunBookDefinition' -Value (Get-Command -Name "Test-AzureRMPublishAutomationAccountRunBook") -Force
 New-Variable -Name 'Test-AzureRMPublishAutomationAccountRunBookAst' -Value (${Test-AzureRMPublishAutomationAccountRunBookDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-AzureRMCreateFunction {
+Function Test-AzureRMCreateFunction {
     <#
     .SYNOPSIS
         Tests whether a principal can create a new function in an existing Function App
@@ -1353,7 +1352,7 @@ function Test-AzureRMCreateFunction {
 New-Variable -Name 'Test-AzureRMCreateFunctionDefinition' -Value (Get-Command -Name "Test-AzureRMCreateFunction") -Force
 New-Variable -Name 'Test-AzureRMCreateFunctionAst' -Value (${Test-AzureRMCreateFunctionDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Invoke-AllAzureRMAbuseTests {
+Function Invoke-AllAzureRMAbuseTests {
     <#
     .SYNOPSIS
         ...
@@ -1578,7 +1577,7 @@ function Invoke-AllAzureRMAbuseTests {
     $AzureRMTestResults
 }
 
-function Remove-AbuseTestAzureRMRoles {
+Function Remove-AbuseTestAzureRMRoles {
     <#
     .SYNOPSIS
         Remove all AzureRM role assignments associated with a particular abuse test GUID
@@ -1693,7 +1692,7 @@ function Remove-AbuseTestAzureRMRoles {
     }
 }
 
-function Remove-AbuseTestServicePrincipals {
+Function Remove-AbuseTestServicePrincipals {
     <#
     .SYNOPSIS
         Remove all AzureAD Service Principals associated with a particular abuse test GUID
@@ -1778,7 +1777,7 @@ function Remove-AbuseTestServicePrincipals {
     }
 }
 
-function Get-MGAppRoles {
+Function Get-MGAppRoles {
     <#
     .SYNOPSIS
         Gets the current list of available MS Graph app roles
@@ -1832,7 +1831,7 @@ function Get-MGAppRoles {
     }
 }
 
-function New-TestAppReg {
+Function New-TestAppReg {
     <#
     .SYNOPSIS
         Create a test Azure app registration for the purpose of an abuse automation test
@@ -1933,7 +1932,7 @@ function New-TestAppReg {
 New-Variable -Name 'New-TestAppRegDefinition' -Value (Get-Command -Name "New-TestAppReg") -Force
 New-Variable -Name 'New-TestAppRegAst' -Value (${New-TestAppRegDefinition}.ScriptBlock.Ast.Body) -Force
 
-function New-TestSP {
+Function New-TestSP {
     <#
     .SYNOPSIS
         Create a test service principal for the purpose of an abuse automation test
@@ -2029,7 +2028,7 @@ function New-TestSP {
 New-Variable -Name 'New-TestSPDefinition' -Value (Get-Command -Name "New-TestSP") -Force
 New-Variable -Name 'New-TestSPAst' -Value (${New-TestSPDefinition}.ScriptBlock.Ast.Body) -Force
 
-function New-AppRegSecret {
+Function New-AppRegSecret {
     <#
     .SYNOPSIS
         Add a new secret to an existing app registration object
@@ -2118,7 +2117,7 @@ function New-AppRegSecret {
 New-Variable -Name 'New-AppRegSecretDefinition' -Value (Get-Command -Name "New-AppRegSecret") -Force
 New-Variable -Name 'New-AppRegSecretAst' -Value (${New-AppRegSecretDefinition}.ScriptBlock.Ast.Body) -Force
 
-function New-ServicePrincipalSecret {
+Function New-ServicePrincipalSecret {
     <#
     .SYNOPSIS
         Add a new secret to an existing service principal
@@ -2200,7 +2199,7 @@ function New-ServicePrincipalSecret {
 New-Variable -Name 'New-ServicePrincipalSecretDefinition' -Value (Get-Command -Name "New-ServicePrincipalSecret") -Force
 New-Variable -Name 'New-ServicePrincipalSecretAst' -Value (${New-ServicePrincipalSecretDefinition}.ScriptBlock.Ast.Body) -Force
 
-function New-AppRoleAssignment {
+Function New-AppRoleAssignment {
     <#
     .SYNOPSIS
         Grant an App Role assignment to a Service Principal
@@ -2299,7 +2298,7 @@ function New-AppRoleAssignment {
 New-Variable -Name 'New-AppRoleAssignmentDefinition' -Value (Get-Command -Name "New-AppRoleAssignment") -Force
 New-Variable -Name 'New-AppRoleAssignmentAst' -Value (${New-AppRoleAssignmentDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSelfAsOwnerOfApp {
+Function Test-MGAddSelfAsOwnerOfApp {
     <#
     .SYNOPSIS
         Tests whether a Service Principal add itself as the owner of an app registration object
@@ -2456,7 +2455,7 @@ function Test-MGAddSelfAsOwnerOfApp {
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfAppDefinition' -Value (Get-Command -Name "Test-MGAddSelfAsOwnerOfApp") -Force
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfAppAst' -Value (${Test-MGAddSelfAsOwnerOfAppDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSelfAsOwnerOfSP {
+Function Test-MGAddSelfAsOwnerOfSP {
     <#
     .SYNOPSIS
         Tests whether a Service Principal add itself as the owner of another Service Principal
@@ -2620,7 +2619,7 @@ function Test-MGAddSelfAsOwnerOfSP {
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfSPDefinition' -Value (Get-Command -Name "Test-MGAddSelfAsOwnerOfSP") -Force
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfSPAst' -Value (${Test-MGAddSelfAsOwnerOfSPDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSelfToAADRole {
+Function Test-MGAddSelfToAADRole {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can activate itself into an AAD Admin role
@@ -2780,7 +2779,7 @@ function Test-MGAddSelfToAADRole {
 New-Variable -Name 'Test-MGAddSelfToAADRoleDefinition' -Value (Get-Command -Name "Test-MGAddSelfToAADRole") -Force
 New-Variable -Name 'Test-MGAddSelfToAADRoleAst' -Value (${Test-MGAddSelfToAADRoleDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSelfToMGAppRole {
+Function Test-MGAddSelfToMGAppRole {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can activate itself into an MS Graph App role
@@ -2941,7 +2940,7 @@ function Test-MGAddSelfToMGAppRole {
 New-Variable -Name 'Test-MGAddSelfToMGAppRoleDefinition' -Value (Get-Command -Name "Test-MGAddSelfToMGAppRole") -Force
 New-Variable -Name 'Test-MGAddSelfToMGAppRoleAst' -Value (${Test-MGAddSelfToMGAppRoleDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddOwnerToRoleEligibleGroup {
+Function Test-MGAddOwnerToRoleEligibleGroup {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can add itself as owner of a role eligible security group
@@ -3076,7 +3075,7 @@ function Test-MGAddOwnerToRoleEligibleGroup {
 New-Variable -Name 'Test-MGAddOwnerToRoleEligibleGroupDefinition' -Value (Get-Command -Name "Test-MGAddOwnerToRoleEligibleGroup") -Force
 New-Variable -Name 'Test-MGAddOwnerToRoleEligibleGroupAst' -Value (${Test-MGAddOwnerToRoleEligibleGroupDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddMemberToRoleEligibleGroup {
+Function Test-MGAddMemberToRoleEligibleGroup {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can add itself as member of a role eligible security group
@@ -3211,7 +3210,7 @@ function Test-MGAddMemberToRoleEligibleGroup {
 New-Variable -Name 'Test-MGAddMemberToRoleEligibleGroupDefinition' -Value (Get-Command -Name "Test-MGAddMemberToRoleEligibleGroup") -Force
 New-Variable -Name 'Test-MGAddMemberToRoleEligibleGroupAst' -Value (${Test-MGAddMemberToRoleEligibleGroupDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSecretToSP {
+Function Test-MGAddSecretToSP {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can add a new secret to a service principal
@@ -3349,7 +3348,7 @@ function Test-MGAddSecretToSP {
 New-Variable -Name 'Test-MGAddSecretToSPDefinition' -Value (Get-Command -Name "Test-MGAddSecretToSP") -Force
 New-Variable -Name 'Test-MGAddSecretToSPAst' -Value (${Test-MGAddSecretToSPDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Test-MGAddSecretToApp {
+Function Test-MGAddSecretToApp {
     <#
     .SYNOPSIS
         Tests whether a Service Principal can add a new secret to an app 
@@ -3487,7 +3486,7 @@ function Test-MGAddSecretToApp {
 New-Variable -Name 'Test-MGAddSecretToAppDefinition' -Value (Get-Command -Name "Test-MGAddSecretToApp") -Force
 New-Variable -Name 'Test-MGAddSecretToAppAst' -Value (${Test-MGAddSecretToAppDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Invoke-AllAzureMGAbuseTests {
+Function Invoke-AllAzureMGAbuseTests {
     <#
     .SYNOPSIS
         ...
@@ -3731,7 +3730,7 @@ function Invoke-AllAzureMGAbuseTests {
 
 }
 
-function Invoke-AllAzureADAbuseTests {
+Function Invoke-AllAzureADAbuseTests {
     <#
     .SYNOPSIS
         ...
@@ -4006,7 +4005,7 @@ function Invoke-AllAzureADAbuseTests {
     $MGTestResults
 }
 
-function Get-AllAzureADApps {
+Function Get-AllAzureADApps {
     <#
     .SYNOPSIS
         Retrieves all JSON-formatted Azure AD application registration objects using the MS Graph API
@@ -4083,7 +4082,7 @@ function Get-AllAzureADApps {
 
 }
 
-function Get-AllAzureADServicePrincipals {
+Function Get-AllAzureADServicePrincipals {
     <#
     .SYNOPSIS
         Retrieves all JSON-formatted Azure AD service principal objects using the MS Graph API
@@ -4160,7 +4159,7 @@ function Get-AllAzureADServicePrincipals {
 
 }
 
-function Get-AllAzureADUsers {
+Function Get-AllAzureADUsers {
     <#
     .SYNOPSIS
         Retrieves all JSON-formatted Azure AD users objects using the MS Graph API
@@ -4237,7 +4236,7 @@ function Get-AllAzureADUsers {
 
 }
 
-function Get-AllAzureADGroups {
+Function Get-AllAzureADGroups {
     <#
     .SYNOPSIS
         Retrieves all JSON-formatted Azure AD groups objects using the MS Graph API
@@ -4314,7 +4313,7 @@ function Get-AllAzureADGroups {
 
 }
 
-function Get-AllAzureRMSubscriptions {
+Function Get-AllAzureRMSubscriptions {
     <#
     .SYNOPSIS
         Retrieves all JSON-formatted Azure RM subscriptions using the Azure management API
@@ -4346,22 +4345,13 @@ function Get-AllAzureRMSubscriptions {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $Token,
-
-        [Parameter(
-            Mandatory = $False
-        )]
-        [Switch]
-        $ShowProgress = $False
+        $Token
     )
 
-    # Get all apps
-    $URI = "https://graph.microsoft.com/beta/groups/?`$count=true"
+    # Get all subscriptions
+    $URI = "https://management.azure.com/subscriptions?api-version=2020-01-01"
     $Results = $null
-    $GroupsObjects = $null
-    If ($ShowProgress) {
-        Write-Progress -Activity "Enumerating Groups" -Status "Initial request..."
-    }
+    $SubscriptionObjects = $null
     do {
         $Results = Invoke-RestMethod `
             -Headers @{
@@ -4372,24 +4362,19 @@ function Get-AllAzureRMSubscriptions {
             -UseBasicParsing `
             -Method "GET" `
             -ContentType "application/json"
-        if ($Results.'@odata.count') {
-            $TotalGroupsCount = $Results.'@odata.count'
-        }
         if ($Results.value) {
-            $GroupsObjects += $Results.value
+            $SubscriptionObjects += $Results.value
         } else {
-            $GroupsObjects += $Results
+            $SubscriptionObjects += $Results
         }
         $uri = $Results.'@odata.nextlink'
-        If ($ShowProgress) {
-            $PercentComplete = ([Int32](($GroupsObjects.count/$TotalGroupsCount)*100))
-            Write-Progress -Activity "Enumerating Groups" -Status "$($PercentComplete)% complete [$($GroupsObjects.count) of $($TotalGroupsCount)]" -PercentComplete $PercentComplete
-        }
     } until (!($uri))
 
-    $GroupsObjects
+    $SubscriptionObjects
 
 }
+
+$Subs = Get-AllAzureRMSubscriptions -Token $mytoken
 
 Function ConvertTo-Markdown {
     <#
