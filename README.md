@@ -9,7 +9,7 @@ BARK requires no third party dependencies. BARK's functions are designed to be a
 Getting Started
 ---------------
 
-There are [https://www.netspi.com/blog/technical/network-penetration-testing/15-ways-to-bypass-the-powershell-execution-policy/](many ways) to import a PowerShell script. Here's one way:
+There are [many ways](https://www.netspi.com/blog/technical/network-penetration-testing/15-ways-to-bypass-the-powershell-execution-policy/) to import a PowerShell script. Here's one way:
 
 First, download BARK.ps1 by cloning this repo or simply copy/pasting its raw contents from GitHub.
 
