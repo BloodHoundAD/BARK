@@ -13,8 +13,6 @@ There are [https://www.netspi.com/blog/technical/network-penetration-testing/15-
 
 First, download BARK.ps1 by cloning this repo or simply copy/pasting its raw contents from GitHub.
 
-::
-
     git clone https://github.com/BloodHoundAD/BARK
     
 Now, cd into the directory where the PS1 is:
