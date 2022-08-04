@@ -19,13 +19,9 @@ First, download BARK.ps1 by cloning this repo or simply copy/pasting its raw con
     
 Now, cd into the directory where the PS1 is:
 
-::
-
     cd BARK
     
 Finally, you can dot import the PS1 like this:
-
-::
 
     . .\BARK.ps1
     
@@ -40,19 +36,13 @@ Let's say you want to list all of the users in an Azure Active Directory tenant.
 
 If you have a username/password combination for an AzureAD user in that tenant, you can first acquire a refresh token for the user using BARK's ``Get-AZRefreshTokenWithUsernamePassword`` function:
 
-::
-
     $MyRefreshTokenRequest = Get-AZRefreshTokenWithUsernamePassword -username "arobbins@contoso.onmicrosoft.com" -password "MyVeryCoolPassword" -TenantID "contoso.onmicrosoft.com"
     
 The resulting object you just created, `$MyRefreshTokenRequest`, will have as part of it a refresh token for your user. You can now request an MS Graph-scoped token using this refresh token:
 
-::
-
     $MyMSGraphToken = Get-MSGraphTokenWithRefreshToken -RefreshToken $MyRefreshTokenRequest.refresh_token -TenantID "contoso.onmicrosoft.com"
     
 Now this new object, `$MyMSGraphToken`, will have as one of its property values an MS Graph-scoped JWT for your user. You are now ready to use this token to list all the users in the AzureAD tenant:
-
-::
 
     $MyAADUsers = Get-AllAzureADUsers -Token $MyMSGraphToken.access_token -ShowProgress
     
