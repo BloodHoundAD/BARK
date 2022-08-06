@@ -65,7 +65,6 @@ Function Parse-JWTToken {
 
     Write-Output $output
 }
-
 New-Variable -Name 'Parse-JWTTokenDefinition' -Value (Get-Command -Name "Parse-JWTToken") -Force
 New-Variable -Name 'Parse-JWTTokenAst' -Value (${Parse-JWTTokenDefinition}.ScriptBlock.Ast.Body) -Force
 
@@ -109,6 +108,88 @@ Function Get-AZRefreshTokenWithUsernamePassword {
 }
 New-Variable -Name 'Get-AZRefreshTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-AZRefreshTokenWithUsernamePassword") -Force
 New-Variable -Name 'Get-AZRefreshTokenWithUsernamePasswordAst' -Value (${Get-AZRefreshTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
+
+Function Get-MSGraphTokenWithUsernamePassword {
+    <#
+    .DESCRIPTION
+    Requests an MS Graph-scoped JWT from STS. This will fail if your user has MFA requiremnts.
+    #>
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Username,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Password,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $TenantID
+    )
+
+    $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
+
+    $Body = @{
+        Grant_Type    =   "password"
+        Scope         =   "https://graph.microsoft.com/.default"
+        Username      =   $Username
+        Password      =   $Password
+        Client_ID     =   $ClientID
+        
+    }
+
+    $Token = Invoke-RestMethod `
+        -URI    "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+        -Method POST `
+        -Body   $Body
+
+    $Token
+}
+New-Variable -Name 'Get-MSGraphTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-MSGraphTokenWithUsernamePassword") -Force
+New-Variable -Name 'Get-MSGraphTokenWithUsernamePasswordAst' -Value (${Get-MSGraphTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
+
+Function Get-ARMTokenWithUsernamePassword {
+    <#
+    .DESCRIPTION
+    Requests an AzureRM-scoped JWT from STS. This will fail if your user has MFA requiremnts.
+    #>
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Username,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Password,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $TenantID
+    )
+
+    $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
+
+    $Body = @{
+        Grant_Type    =   "password"
+        Scope         =   "https://management.azure.com/.default"
+        Username      =   $Username
+        Password      =   $Password
+        Client_ID     =   $ClientID
+        
+    }
+
+    $Token = Invoke-RestMethod `
+        -URI    "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+        -Method POST `
+        -Body   $Body
+
+    $Token
+}
+New-Variable -Name 'Get-ARMTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-ARMTokenWithUsernamePassword") -Force
+New-Variable -Name 'Get-ARMTokenWithUsernamePasswordAst' -Value (${Get-ARMTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function Get-MSGraphTokenWithClientCredentials {
     <#
@@ -526,6 +607,152 @@ Function Reset-AZUserPassword {
 
 }
 
+Function Add-AZMemberToGroup {
+    <#
+    .SYNOPSIS
+        Attempts to add a principal to an existing AzureAD security group
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Attempts to add a principal to an existing AzureAD security group
+
+    .PARAMETER PrincipalID
+        The ID of the principal you want to add to the group
+
+    .PARAMETER TargetGroupId
+        The globally unique ID of the target security group
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the princpal you are authenticating as
+
+    .EXAMPLE
+        C:\PS> Add-AZMemberToGroup `
+            -PrincipalID = "028362ca-90ae-41f2-ae9f-1a678cc17391" `
+            -TargetGroupId "b9801b7a-fcec-44e2-a21b-86cb7ec718e4" `
+            -Token $MGToken
+
+        Description
+        -----------
+        Attempt to add the principal with ID starting with "028..." to the AzureAD group with ID starting with "b98..."
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PrincipalID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetGroupId,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $body = @{
+        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($PrincipalID)"
+    }
+
+    $AddMemberRequest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($Token)" } `
+        -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/members/`$ref" `
+        -Method         POST `
+        -Body           $($body | ConvertTo-Json) `
+        -ContentType    'application/json'
+        $Success = $True
+
+    $AddMemberRequest
+}
+
+Function Get-AZGroupMembers {
+    <#
+    .SYNOPSIS
+        Read the members of an AzureAD group
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Read the members of an AzureAD group
+
+    .PARAMETER GroupId
+        The globally unique ID of the target security group
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the princpal you are authenticating as
+
+    .EXAMPLE
+        C:\PS> Get-AZGroupMembers `
+            -GroupId "b9801b7a-fcec-44e2-a21b-86cb7ec718e4" `
+            -Token $MGToken
+
+        Description
+        -----------
+        Read the members of the group whose object ID starts with "b98..."
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GroupId,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "https://graph.microsoft.com/v1.0/groups/$($GroupId)/members" 
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $AZGroupMembers += $Results.value
+        } else {
+            $AZGroupMembers += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $AZGroupMembers
+}
+
 Function Get-AzureRMRoleDefinitions {
     <#
     .SYNOPSIS
@@ -609,31 +836,30 @@ Function New-AzureRMRoleAssignment {
         Required Dependencies: None
 
     .DESCRIPTION
-        Grants an AzureRM role assignment to an existing AzureAD Service Principal. You must wait at least 2 minutes before using the role assignment: https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#known-limits-and-performance
+        Grants an AzureRM role assignment to an existing AzureAD principal. You must wait at least 2 minutes before using the role assignment: https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#known-limits-and-performance
 
-    .PARAMETER SPObjectId
-        The object ID of the existing AAD Service Principal to which you are granting the AzureRM role
+    .PARAMETER PrincipalId
+        The object ID of the existing AAD principal to which you are granting the AzureRM role
 
     .PARAMETER AzureRMRoleID
-        The ID of the AzureRM Role you are granting to the AAD Service Principal
+        The ID of the AzureRM Role you are granting to the AAD principal
 
-    .PARAMETER SubscriptionID
-        The ID of the AzureRM Subscription the AzureRM Role is scoped against
+    .PARAMETER TargetObjectID
+        The ID of the AzureRM object you are scoping the role assignment against
 
-    .PARAMETER UserAccessAdminAzureRMToken
-        The AzureRM scoped JWT for a User Access Admin principal. This can be a global admin you've granted control of the subscription to (https://adsecurity.org/?p=4277)
+    .PARAMETER Token
+        The AzureRM scoped JWT for a principal with the ability to add new role assignments to the target object.
 
     .EXAMPLE
         C:\PS> New-AzureRMRoleAssignment `
             -PrincipalId "e21abf7a-1fe6-405f-90c0-46e1ce5360e6" `
             -AzureRMRoleID "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/providers/Microsoft.Authorization/roleDefinitions/4465e953-8ced-4406-a58e-0f6e3f3b530b" `
-            -AzureRMRoleDisplayName "FHIR Data Importer"
-            -SubscriptionID "f1816681-4df5-4a31-acfa-922401687008" `
-            -UserAccessAdminAzureRMToken $ARMToken
+            -TargetObjectID "f1816681-4df5-4a31-acfa-922401687008" `
+            -Token $ARMToken
 
         Description
         -----------
-        Grant the AzureRM role with ID of "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/providers/Microsoft.Authorization/roleDefinitions/4465e953-8ced-4406-a58e-0f6e3f3b530b" to the principal with ObjectID of "e21abf7a-1fe6-405f-90c0-46e1ce5360e6"
+        Grant the AzureRM role with ID of "/subscriptions/f18.../providers/Microsoft.Authorization/roleDefinitions/446..." to the principal with ObjectID of "e21..." against the object whose ID starts with "f18..."
 
     .INPUTS
         String
@@ -665,7 +891,7 @@ Function New-AzureRMRoleAssignment {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $AzureRMRoleDisplayName,
+        $TargetObjectID,
 
         [Parameter(
             Mandatory = $True,
@@ -673,48 +899,193 @@ Function New-AzureRMRoleAssignment {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $SubscriptionID,
-
-        [Parameter(
-            Mandatory = $True,
-            ValueFromPipeline = $True,
-            ValueFromPipelineByPropertyName = $True
-        )]
-        [String]
-        $UserAccessAdminAzureRMToken
+        $Token
         
     )
 
-    # Grant the subscription level role to the principal
     $body = @{
         properties = @{
-            roleDefinitionId = $AzureRMRoleID
-            principalId = $PrincipalId
+            roleDefinitionId    =   $AzureRMRoleID
+            principalId         =   $PrincipalId
         }
     }
     $RoleAssignmentGUID = ([GUID]::NewGuid()).toString()
-    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Authorization/roleAssignments/$($RoleAssignmentGUID)?api-version=2018-01-01-preview"
-    $GrantAzureRMRole = Invoke-RestMethod `
-        -Headers @{Authorization = "Bearer $($UserAccessAdminAzureRMToken)"} `
-        -URI $URI `
-        -Method PUT `
-        -Body $($body | ConvertTo-Json) `
-        -ContentType 'application/json'
 
-    # Return an object of the newly created AzureRM Role assignment
-    $AzureRMRoleAssignment = New-Object PSObject -Property @{
-        AzureRMRoleAssignmentID                     = $GrantAzureRMRole.id
-        AzureRMRoleAssignmentDisplayName            = $AzureRMRoleDisplayName
-        AzureRMRoleAssignmentRoleID                 = $GrantAzureRMRole.properties.roleDefinitionId
-        AzureRMRoleAssignmentPrincipalID            = $GrantAzureRMRole.properties.principalId
-        AzureRMRoleAssignmentScope                  = $GrantAzureRMRole.properties.scope
-    }
-    
-    $AzureRMRoleAssignment
+    $URI = "https://management.azure.com/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments/$($RoleAssignmentGUID)?api-version=2018-01-01-preview"
+
+    $GrantAzureRMRole = Invoke-RestMethod `
+        -Headers        @{Authorization = "Bearer $($Token)"} `
+        -URI            $URI `
+        -Method         PUT `
+        -Body           $($body | ConvertTo-Json) `
+        -ContentType    'application/json'
+
+    $GrantAzureRMRole
 
 }
 New-Variable -Name 'New-AzureRMRoleAssignmentDefinition' -Value (Get-Command -Name "New-AzureRMRoleAssignment") -Force
 New-Variable -Name 'New-AzureRMRoleAssignmentAst' -Value (${New-AzureRMRoleAssignmentDefinition}.ScriptBlock.Ast.Body) -Force
+
+Function Get-AzureRMRoleAssignments {
+    <#
+    .SYNOPSIS
+        Lists all AzureRM role assignments against a specified object
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Lists all AzureRM role assignments against a specified object
+
+    .PARAMETER TargetObjectID
+        The ID of the AzureRM object you are listing role assignments of.
+
+    .PARAMETER Token
+        The AzureRM scoped JWT for a principal with the ability to read role assignments scoped to the target object.
+
+    .EXAMPLE
+        C:\PS> New-AzureRMRoleAssignments `
+            -TargetObjectID "f1816681-4df5-4a31-acfa-922401687008" `
+            -Token $ARMToken
+
+        Description
+        -----------
+        List the Azure role assignments scoped to the object whose ID starts with "f18..."
+
+    .INPUTS
+        String
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+        https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-rest
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetObjectID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "https://management.azure.com/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments?api-version=2018-01-01-preview"
+
+    $AzureRMRoleAssignments = Invoke-RestMethod `
+        -Headers        @{Authorization = "Bearer $($Token)"} `
+        -URI            $URI `
+        -Method         GET `
+        -ContentType    'application/json'
+
+    $AzureRMRoleAssignments.value.properties
+
+}
+
+Function Invoke-AzureRMVMRunCommand {
+    <#
+    .SYNOPSIS
+        Attempts to run a SYSTEM command on an Azure Virtual Machine via the runCommand endpoint
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Attempts to run a SYSTEM command on an Azure Virtual Machine via the runCommand endpoint
+
+    .PARAMETER TargetVMId
+        The unique identifier of the Azure Virtual Machine
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the principal with the ability to run a command on the VM
+
+    .PARAMETER Script
+        The PowerShell script you want to run on the VM
+
+    .EXAMPLE
+        C:\PS> Invoke-AzureRMVMRunCommand `
+            -Token $ARMToken `
+            -TargetVMId "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VirtualMachines/providers/Microsoft.Compute/virtualMachines/MyWin10VirtualMachine" `
+            -Script @('whoami')
+
+        Description
+        -----------
+        Attempts to run "whoami" as a SYSTEM command via the runCommand endpoint on the MyWin10VirtualMachine VM.
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+        https://www.netspi.com/blog/technical/cloud-penetration-testing/azure-privilege-escalation-using-managed-identities/
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetVMId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        $Script
+
+    )
+
+    $URI = "https://management.azure.com/$($TargetVMId)/runCommand?api-version=2018-04-01"
+    
+    $Body = @{
+        commandId = "RunPowerShellScript"
+        script = $Script
+    }
+    
+    $RunCommandRequest = Invoke-RestMethod `
+        -Uri $URI `
+        -Method POST `
+        -Headers @{Authorization = "Bearer $Token"} `
+        -ContentType "application/json" `
+        -Body $($Body | ConvertTo-Json) `
+        -ResponseHeadersVariable "Headers"
+    
+    $AsyncLocation = $Headers.'Azure-AsyncOperation'
+    
+    $RefreshAttempts = 0
+    Do {
+      $AsyncJob = Invoke-RestMethod `
+        -Uri $AsyncLocation[0] `
+        -Method GET `
+        -Headers @{Authorization = "Bearer $Token"}
+      $RefreshAttempts++
+      Start-Sleep -s 6
+    } Until (
+        $AsyncJob.status -Like "Succeeded" -Or $RefreshAttempts -GT 30
+    )
+    
+    $CommandOutput = $AsyncJob.properties.output.value | ?{$_.code -Like "ComponentStatus/StdOut/succeeded"} | Select -ExpandProperty message
+    
+    $CommandOutput
+
+}
 
 Function Test-AzureRMAddSelfToAzureRMRole {
     <#
@@ -1518,11 +1889,10 @@ Function Invoke-AllAzureRMAbuseTests {
 
         # Grant the AzureRM Role to the SP
         $AzureRMRoleAssign = (& ${global:New-AzureRMRoleAssignment} `
-            -SPObjectId $ThreadSafeSP.SPObjectId `
-            -AzureRMRoleDisplayName $_.AzureRMRoleDisplayName `
+            -PrincipalId $ThreadSafeSP.SPObjectId `
             -AzureRMRoleID $_.AzureRMRoleID `
-            -SubscriptionID $using:SubscriptionID `
-            -UserAccessAdminAzureRMToken $ThreadSafeUserAccessAdminToken.access_token
+            -TargetObjectID $using:SubscriptionID `
+            -Token $ThreadSafeUserAccessAdminToken.access_token
         )
         #Wait 2 minutes for the role assignment to take effect
         Start-Sleep 120s
