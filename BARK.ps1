@@ -4570,7 +4570,7 @@ Function Get-AllAzureADUsers {
         $ShowProgress = $False
     )
 
-    # Get all apps
+    # Get all users
     $URI = "https://graph.microsoft.com/beta/users/?`$count=true"
     $Results = $null
     $UserObjects = $null
