@@ -4815,6 +4815,76 @@ Function Get-AllAzureRMResourceGroups {
 
 }
 
+Function Get-AllAzureRMVirtualMachines {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM virtual machine objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM virtual machine objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list virtual machines
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list virtual machines under
+    
+    .EXAMPLE
+    C:\PS> $VirtualMachines = Get-AllAzureRMVirtualMachines -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all virtual machines under the subscription with ID starting with "839..." and put them into the $VirtualMachines variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Virtual Machines under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Compute/virtualMachines?api-version=2022-03-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $VirtualMachineObjects += $Results.value
+        } else {
+            $VirtualMachineObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $VirtualMachineObjects
+
+}
+
 Function ConvertTo-Markdown {
     <#
     .Synopsis
