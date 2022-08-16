@@ -65,6 +65,7 @@ Function Parse-JWTToken {
 
     Write-Output $output
 }
+
 New-Variable -Name 'Parse-JWTTokenDefinition' -Value (Get-Command -Name "Parse-JWTToken") -Force
 New-Variable -Name 'Parse-JWTTokenAst' -Value (${Parse-JWTTokenDefinition}.ScriptBlock.Ast.Body) -Force
 
@@ -1106,7 +1107,7 @@ Function Invoke-AzureRMVMRunCommand {
         C:\PS> Invoke-AzureRMVMRunCommand `
             -Token $ARMToken `
             -TargetVMId "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VirtualMachines/providers/Microsoft.Compute/virtualMachines/MyWin10VirtualMachine" `
-            -Script @('whoami')
+            -Script "whoami"
 
         Description
         -----------
@@ -4786,14 +4787,14 @@ Function Get-AllAzureRMSubscriptions {
         Retrieves all JSON-formatted Azure RM subscriptions using the Azure management API
     
     .PARAMETER Token
-        The MS Graph-scoped JWT for the user with read access to AzureAD groups
+        The AzureRM-scoped JWT for the user with the ability to list subscriptions
     
     .EXAMPLE
-    C:\PS> $Subscriptions = Get-AllAzureRMSubscriptions -Token $Token -ShowProgress
+    C:\PS> $Subscriptions = Get-AllAzureRMSubscriptions -Token $Token
     
     Description
     -----------
-    Uses the JWT in the $Token variable to list all groups and put them into the $Subscriptions variable
+    Uses the JWT in the $Token variable to list all subscriptions and put them into the $Subscriptions variable
     
     .LINK
         https://medium.com/p/74aee1006f48
@@ -4831,6 +4832,146 @@ Function Get-AllAzureRMSubscriptions {
     } until (!($uri))
 
     $SubscriptionObjects
+
+}
+
+Function Get-AllAzureRMResourceGroups {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM resource groups under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM resource groups under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list resource groups
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list resource groups under
+    
+    .EXAMPLE
+    C:\PS> $ResourceGroups = Get-AllAzureRMResourceGroups -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all resource groups under the subscription with ID starting with "839..." and put them into the $ResourceGroups variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all resource groups under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/resourcegroups?api-version=2021-04-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $ResourceGroupObjects += $Results.value
+        } else {
+            $ResourceGroupObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $ResourceGroupObjects
+
+}
+
+Function Get-AllAzureRMVirtualMachines {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM virtual machine objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM virtual machine objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list virtual machines
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list virtual machines under
+    
+    .EXAMPLE
+    C:\PS> $VirtualMachines = Get-AllAzureRMVirtualMachines -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all virtual machines under the subscription with ID starting with "839..." and put them into the $VirtualMachines variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Virtual Machines under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Compute/virtualMachines?api-version=2022-03-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $VirtualMachineObjects += $Results.value
+        } else {
+            $VirtualMachineObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $VirtualMachineObjects
 
 }
 
