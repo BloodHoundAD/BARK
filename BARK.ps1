@@ -86,7 +86,11 @@ Function Get-AZRefreshTokenWithUsernamePassword {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
@@ -98,6 +102,11 @@ Function Get-AZRefreshTokenWithUsernamePassword {
         Password      =   $Password
         Client_ID     =   $ClientID
         
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -127,7 +136,11 @@ Function Get-MSGraphTokenWithUsernamePassword {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
@@ -139,6 +152,11 @@ Function Get-MSGraphTokenWithUsernamePassword {
         Password      =   $Password
         Client_ID     =   $ClientID
         
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -168,7 +186,11 @@ Function Get-ARMTokenWithUsernamePassword {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
@@ -180,6 +202,11 @@ Function Get-ARMTokenWithUsernamePassword {
         Password      =   $Password
         Client_ID     =   $ClientID
         
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -209,7 +236,11 @@ Function Get-MSGraphTokenWithClientCredentials {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantName
+        $TenantName,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $Body = @{
@@ -217,6 +248,11 @@ Function Get-MSGraphTokenWithClientCredentials {
         Scope           =   "https://graph.microsoft.com/.default"
         client_Id       =   $ClientID
         Client_Secret   =   $ClientSecret
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -244,7 +280,11 @@ Function Get-MSGraphTokenWithRefreshToken {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $Body = @{
@@ -252,6 +292,11 @@ Function Get-MSGraphTokenWithRefreshToken {
         "refresh_token" =   $RefreshToken
         "scope"         =   "openid"
         "resource"      =   "https://graph.microsoft.com"
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -287,7 +332,11 @@ Function Get-MSGraphTokenWithPortalAuthRefreshToken {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $PortalID
+        $PortalID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $Body = @{
@@ -296,6 +345,11 @@ Function Get-MSGraphTokenWithPortalAuthRefreshToken {
         tenant = $TenantID
         portalAuthorization = $PortalAuthRefreshToken
         altPortalAuthorization = $AltPortalAuthRefreshToken
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $WebSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -334,7 +388,11 @@ Function Get-ARMTokenWithPortalAuthRefreshToken {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $Body = @{
@@ -343,6 +401,11 @@ Function Get-ARMTokenWithPortalAuthRefreshToken {
         tenant = $TenantID
         portalAuthorization = $PortalAuthRefreshToken
         altPortalAuthorization = $AltPortalAuthRefreshToken
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $WebSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -379,7 +442,11 @@ Function Get-AzureRMTokenWithClientCredentials {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantName
+        $TenantName,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
 
     $Body = @{
@@ -387,6 +454,11 @@ Function Get-AzureRMTokenWithClientCredentials {
         Scope           =   "https://management.azure.com/.default"
         client_Id       =   $ClientID
         Client_Secret   =   $ClientSecret
+    }
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -414,8 +486,17 @@ Function Get-ARMTokenWithRefreshToken {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
+    }
 
     $Body = @{
         "grant_type"    =   "refresh_token"
@@ -449,8 +530,17 @@ Function Get-AzurePortalTokenWithRefreshToken {
 
         [Parameter(Mandatory = $True)]
         [string]
-        $TenantID
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
     )
+
+    if ($UseCAE) {
+        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Body.Add("claims", $Claims)
+    }
 
     $Body = @{
         "grant_type"    =   "refresh_token"
