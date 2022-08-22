@@ -953,7 +953,7 @@ Function Get-AzureRMRoleDefinitions {
         The unique identifier for your target subscription
 
     .EXAMPLE
-        Get-AzureRMRoles -Token $ARMToken -SubscriptionID "bf51..."
+        Get-AzureRMRoleDefinitions -Token $ARMToken -SubscriptionID "bf51..."
 
         Description
         -----------
@@ -1092,7 +1092,7 @@ Function New-AzureRMRoleAssignment {
     }
     $RoleAssignmentGUID = ([GUID]::NewGuid()).toString()
 
-    $URI = "https://management.azure.com/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments/$($RoleAssignmentGUID)?api-version=2018-01-01-preview"
+    $URI = "https://management.azure.com/subscriptions/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments/$($RoleAssignmentGUID)?api-version=2018-01-01-preview"
 
     $GrantAzureRMRole = Invoke-RestMethod `
         -Headers        @{Authorization = "Bearer $($Token)"} `
@@ -1298,9 +1298,6 @@ Function Test-AzureRMAddSelfToAzureRMRole {
     .PARAMETER TimeOfTest
         The Get-Date formatted time the test was performed
 
-    .PARAMETER TestGUID
-        The unique GUID for this test or group of tests
-
     .PARAMETER SubscriptionID
         The unique identifier of the target subscription
 
@@ -1312,7 +1309,6 @@ Function Test-AzureRMAddSelfToAzureRMRole {
             -UserAccessAdminAzureRMToken $ARMToken `
             -TimeOfTest (Get-Date) `
             -HeldPrivilege "FHIR Data Importer" `
-            -TestGUID "6b6f9289" `
             -SubscriptionID "f1816681-4df5-4a31-acfa-922401687008"
 
         Description
@@ -1363,14 +1359,6 @@ Function Test-AzureRMAddSelfToAzureRMRole {
         )]
         [String]
         $TimeOfTest,
-
-        [Parameter(
-            Mandatory = $True,
-            ValueFromPipeline = $True,
-            ValueFromPipelineByPropertyName = $True
-        )]
-        [String]
-        $TestGUID,
         
         [Parameter(
             Mandatory = $True,
@@ -1452,29 +1440,14 @@ Function Test-AzureRMVMRunCommand {
     .DESCRIPTION
         Test whether the supplied JWT has the privilege to run a SYSTEM command via the runCommand endpoint
 
-    .PARAMETER TestPrincipalID
-        The ID of the principal you are trying to grant the role to
-
-    .PARAMETER AzureRMRoleDefinitionId
-        The globally unique ID of the AzureRM role you are trying to grant the SP
-
     .PARAMETER TestToken
         The AzureRM-scoped JWT for the test principal
-
-    .PARAMETER UserAccessAdminAzureRMToken
-        The AzureRM-scoped JWT for a User Access Admin principal
 
     .PARAMETER HeldPrivilege
         The AzureRM role currently held by the test principal
 
     .PARAMETER TimeOfTest
         The Get-Date formatted time the test was performed
-
-    .PARAMETER TestGUID
-        The unique GUID for this test or group of tests
-
-    .PARAMETER SubscriptionID
-        The unique identifier of the target subscription
 
     .EXAMPLE
         C:\PS> Test-AzureRMVMRunCommand `
@@ -1546,7 +1519,6 @@ Function Test-AzureRMVMRunCommand {
         $Success = $True
     }
     Catch {
-        $_
     }
 
     # Return an object of the test result:
@@ -1586,17 +1558,11 @@ Function Test-AzureRMPublishAutomationAccountRunBook {
     .PARAMETER TestToken
         The AzureRM-scoped JWT for the test principal
 
-    .PARAMETER UserAccessAdminAzureRMToken
-        The AzureRM-scoped JWT for a User Access Admin principal
-
     .PARAMETER HeldPrivilege
         The AzureRM role currently held by the test principal
 
     .PARAMETER TimeOfTest
         The Get-Date formatted time the test was performed
-
-    .PARAMETER TestGUID
-        The unique GUID for this test or group of tests
 
     .PARAMETER SubscriptionID
         The unique identifier of the target subscription
@@ -1648,7 +1614,15 @@ Function Test-AzureRMPublishAutomationAccountRunBook {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $TimeOfTest
+        $TimeOfTest,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $AutomationAccountPath
     )
     
     $Body = @{
@@ -1763,17 +1737,11 @@ Function Test-AzureRMCreateFunction {
     .PARAMETER TestToken
         The AzureRM-scoped JWT for the test principal
 
-    .PARAMETER UserAccessAdminAzureRMToken
-        The AzureRM-scoped JWT for a User Access Admin principal
-
     .PARAMETER HeldPrivilege
         The AzureRM role currently held by the test principal
 
     .PARAMETER TimeOfTest
         The Get-Date formatted time the test was performed
-
-    .PARAMETER TestGUID
-        The unique GUID for this test or group of tests
 
     .PARAMETER SubscriptionID
         The unique identifier of the target subscription
@@ -1904,17 +1872,17 @@ Function Test-AzureRMCreateFunction {
 New-Variable -Name 'Test-AzureRMCreateFunctionDefinition' -Value (Get-Command -Name "Test-AzureRMCreateFunction") -Force
 New-Variable -Name 'Test-AzureRMCreateFunctionAst' -Value (${Test-AzureRMCreateFunctionDefinition}.ScriptBlock.Ast.Body) -Force
 
-Function Invoke-AllAzureRMAbuseTests {
+function Invoke-AzureRMAbuseTests {
     <#
     .SYNOPSIS
-        ...
+        Performs all AzureRM abuse tests, or specified tests against AzureRM objects if specfied with AbuseTestType switch
 
         Author: Andy Robbins (@_wald0)
         License: GPLv3
         Required Dependencies: None
 
     .DESCRIPTION
-        Performs all abuse tests against various AzureRM objects
+        Performs abuse tests against the appropriate AzureRM object type
 
     .PARAMETER GlobalAdminClientID
         The ID of the service principal with Global Admin at the AzureAD tenant level
@@ -1935,7 +1903,7 @@ Function Invoke-AllAzureRMAbuseTests {
         The ID of the target subscription
 
     .EXAMPLE
-        C:\PS> Invoke-AllAzureRMAbuseTests `
+        C:\PS> Invoke-AzureRMAbuseTests `
             -GlobalAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
             -GlobalAdminSecret "<secret>" `
             -UserAccessAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
@@ -1945,7 +1913,21 @@ Function Invoke-AllAzureRMAbuseTests {
 
         Description
         -----------
-        Perform all AzureRM abuses, determines which available roles are able to perform each abuse primitive
+        Perform all abuse tests, determines which available roles are able to perform all known abuse primitives
+
+    .EXAMPLE
+        C:\PS> Invoke-AzureRMAbuseTests `
+            -GlobalAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
+            -GlobalAdminSecret "<secret>" `
+            -UserAccessAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
+            -UserAccessAdminSecret "<secret>" `
+            -TenantName "contoso.onmicrosoft.com"
+            -SubscriptionID "f1816681-4df5-4a31-acfa-922401687008"
+            -AbuseTestType "AzureRMVMRunCommand"
+
+        Description
+        -----------
+        Perform only the AzureRMVMRunCommand abuse tests, determines which available roles are able to perform that specific abuse primitive
 
     .LINK
         https://medium.com/p/74aee1006f48
@@ -1997,7 +1979,15 @@ Function Invoke-AllAzureRMAbuseTests {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $SubscriptionID
+        $SubscriptionID,
+
+        [Parameter(
+            Mandatory = $False,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $AbuseTestType
         
     )
 
@@ -2013,11 +2003,13 @@ Function Invoke-AllAzureRMAbuseTests {
     $AzureRMTestResults = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
 
     # Get all current AzureRM roles:
-    $SubRoles = Get-AzureRMRoles -Token $UserAccessAdminToken -SubscriptionID $SubscriptionID
+    $SubRoles = Get-AzureRMRoleDefinitions -Token $UserAccessAdminToken -SubscriptionID $SubscriptionID
 
     # Perform all abuse tests, creating a unique Service Principal per AzureRM role:
-    #$SubRoles | ?{$_.AzureRMRoleDisplayName -Match "f2d0ff1c"} | ForEach-Object -ThrottleLimit 50 -Parallel {
+    #$SubRoles | ?{$_.AzureRMRoleDisplayName -Like "Owner"} | ForEach-Object -ThrottleLimit 50 -Parallel {
     $SubRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+
+        $AzureRMRoleDisplayName = $_.AzureRMRoleDisplayName
 
         # Import and later call our functions in a thread-safe way
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
@@ -2029,7 +2021,7 @@ Function Invoke-AllAzureRMAbuseTests {
         If (-Not ${global:Test-AzureRMVMRunCommand})                        { $ast = ${using:Test-AzureRMVMRunCommandAst};                      ${global:Test-AzureRMVMRunCommand} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-AzureRMPublishAutomationAccountRunBook})     { $ast = ${using:Test-AzureRMPublishAutomationAccountRunBookAst};   ${global:Test-AzureRMPublishAutomationAccountRunBook} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-AzureRMCreateFunction})                      { $ast = ${using:Test-AzureRMCreateFunctionAst};                    ${global:Test-AzureRMCreateFunction} = $ast.GetScriptBlock() }
-        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})           { $ast = ${using:Get-MSGraphTokenWithClientCredentials};            ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})           { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst};         ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
         If (-Not ${global:Get-AzureRMTokenWithClientCredentials})           { $ast = ${using:Get-AzureRMTokenWithClientCredentialsAst};         ${global:Get-AzureRMTokenWithClientCredentials} = $ast.GetScriptBlock() }
 
         $ThreadSafeUserAccessAdminToken = (& ${global:Get-AzureRMTokenWithClientCredentials} `
@@ -2042,7 +2034,7 @@ Function Invoke-AllAzureRMAbuseTests {
             -ClientSecret ${using:GlobalAdminSecret} `
             -TenantName ${using:TenantName})
 
-        $ThreadAppRegDisplayName = $(${using:TestGUID} + "-" + $_.AzureRMRoleDisplayName)
+        $ThreadAppRegDisplayName = $(${using:TestGUID} + "-" + $AzureRMRoleDisplayName)
 
         # Create the test app reg:
         $ThreadSafeAppReg = (& ${global:New-TestAppReg} `
@@ -2075,54 +2067,112 @@ Function Invoke-AllAzureRMAbuseTests {
             -TargetObjectID $using:SubscriptionID `
             -Token $ThreadSafeUserAccessAdminToken.access_token
         )
-        #Wait 2 minutes for the role assignment to take effect
-        Start-Sleep 120s
+        #Wait 5 minutes for the role assignment to take effect
+        Start-Sleep 300s
 
         # Get test token
         $ThreadSafeTestToken = (& ${global:Get-AzureRMTokenWithClientCredentials} `
             -ClientID       $ThreadSafeSecret.AppRegAppId `
             -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "contoso.onmicrosoft.com"
+            -TenantName     ${using:TenantName}
         )
 
-        $ThreadSafeTest = (& ${global:Test-AzureRMVMRunCommand} `
-            -TestToken                      $ThreadSafeTestToken.access_token `
-            -HeldPrivilege                  $_.AzureRMRoleDisplayName `
-            -TimeOfTest                     $(Get-Date) 
-        )
-        $LocalTestResult = $using:AzureRMTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+        Switch (${using:AbuseTestType}) {
 
-        $ThreadSafeTest = (& ${global:Test-AzureRMPublishAutomationAccountRunBook} `
-            -TestToken                      $ThreadSafeTestToken.access_token `
-            -HeldPrivilege                  $_.AzureRMRoleDisplayName `
-            -TimeOfTest                     $(Get-Date) `
-            -TestSPDisplayName              $ThreadSafeSP.SPDisplayName
-        )
-        $LocalTestResult = $using:AzureRMTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+            AzureRMVMRunCommand {
+                $ThreadSafeTest = (& ${global:Test-AzureRMVMRunCommand} `
+                    -TestToken              $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege          $AzureRMRoleDisplayName `
+                    -TimeOfTest             $(Get-Date) `
+                    -VirtualMachinePath     "https://management.azure.com//subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VMs/providers/Microsoft.Compute/virtualMachines/Win10-01"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
 
-        $ThreadSafeTest = (& ${global:Test-AzureRMCreateFunction} `
-            -TestToken                      $ThreadSafeTestToken.access_token `
-            -HeldPrivilege                  $_.AzureRMRoleDisplayName `
-            -TimeOfTest                     $(Get-Date) `
-            -TestSPDisplayName              $ThreadSafeSP.SPDisplayName
-        )
-        $LocalTestResult = $using:AzureRMTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+            AzureRMPublishAutomationAccountRunBook {
+                $ThreadSafeTest = (& ${global:Test-AzureRMPublishAutomationAccountRunBook} `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -TestSPDisplayName              $ThreadSafeSP.SPDisplayName `
+                    -AutomationAccountPath          "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/AutomationAccts/providers/Microsoft.Automation/automationAccounts/MyCoolAutomationAccount"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
 
-        $ThreadSafeTest = (& ${global:Test-AzureRMAddSelfToAzureRMRole} `
-            -TestPrincipalID                $ThreadSafeSP.SPObjectId `
-            -AzureRMRoleDefinitionId        "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9" `
-            -TestToken                      $ThreadSafeTestToken.access_token `
-            -UserAccessAdminAzureRMToken    $ThreadSafeUserAccessAdminToken.access_token `
-            -HeldPrivilege                  $_.AzureRMRoleDisplayName `
-            -TestGUID                       ${using:TestGUID} `
-            -TimeOfTest                     $(Get-Date) `
-            -SubscriptionID                 $using:SubscriptionID
-        )
-        $LocalTestResult = $using:AzureRMTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+            AzureRMCreateFunction {
+                $ThreadSafeTest = (& ${global:Test-AzureRMCreateFunction} `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -TestSPDisplayName              $ThreadSafeSP.SPDisplayName `
+                    -PathToFunctionApp              "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/FunctionApps/providers/Microsoft.Web/sites/MyCoolFunctionApp"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            AzureRMAddSelfToAzureRMRole {
+                $ThreadSafeTest = (& ${global:Test-AzureRMAddSelfToAzureRMRole} `
+                    -TestPrincipalID                $ThreadSafeSP.SPObjectId `
+                    -AzureRMRoleDefinitionId        "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9" `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -UserAccessAdminAzureRMToken    $ThreadSafeUserAccessAdminToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -SubscriptionID                 $using:SubscriptionID
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+            
+            # Run all tests by default if the user did not specify an AbuseTestType
+            default {
+                $ThreadSafeTest = (& ${global:Test-AzureRMVMRunCommand} `
+                    -TestToken              $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege          $AzureRMRoleDisplayName `
+                    -TimeOfTest             $(Get-Date) `
+                    -VirtualMachinePath     "https://management.azure.com//subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VMs/providers/Microsoft.Compute/virtualMachines/Win10-01"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-AzureRMPublishAutomationAccountRunBook} `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -TestPrincipalDisplayName       $ThreadSafeSP.SPDisplayName `
+                    -AutomationAccountPath          "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/AutomationAccts/providers/Microsoft.Automation/automationAccounts/MyCoolAutomationAccount"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-AzureRMCreateFunction} `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -TestPrincipalDisplayName       $ThreadSafeSP.SPDisplayName `
+                    -PathToFunctionApp              "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/FunctionApps/providers/Microsoft.Web/sites/MyCoolFunctionApp"
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-AzureRMAddSelfToAzureRMRole} `
+                    -TestPrincipalID                $ThreadSafeSP.SPObjectId `
+                    -AzureRMRoleDefinitionId        "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/providers/Microsoft.Authorization/roleDefinitions/18d7d88d-d35e-4fb5-a5c3-7773c20a72d9" `
+                    -TestToken                      $ThreadSafeTestToken.access_token `
+                    -UserAccessAdminAzureRMToken    $ThreadSafeUserAccessAdminToken.access_token `
+                    -HeldPrivilege                  $AzureRMRoleDisplayName `
+                    -TimeOfTest                     $(Get-Date) `
+                    -SubscriptionID                 $using:SubscriptionID
+                )
+                $LocalTestResult = $using:AzureRMTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+            }
+        }
 
     }
     $AzureRMTestResults
