@@ -3811,6 +3811,141 @@ Function Test-MGAddMemberToRoleEligibleGroup {
 New-Variable -Name 'Test-MGAddMemberToRoleEligibleGroupDefinition' -Value (Get-Command -Name "Test-MGAddMemberToRoleEligibleGroup") -Force
 New-Variable -Name 'Test-MGAddMemberToRoleEligibleGroupAst' -Value (${Test-MGAddMemberToRoleEligibleGroupDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function Test-MGAddMemberToNonRoleEligibleGroup {
+    <#
+    .SYNOPSIS
+        Tests whether a Service Principal can add itself as member of a non-role eligible security group
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Test whether the supplied JWT has the privilege to add itself to a non-role eligible security group
+
+    .PARAMETER TestPrincipalID
+        The ID of the service principal you are trying to activate the role for
+
+    .PARAMETER TargetGroupId
+        The globally unique ID of the target non-role eligible security group
+
+    .PARAMETER TestToken
+        The MS Graph-scoped JWT for the test service principal
+
+    .PARAMETER GlobalAdminMGToken
+        The MS-Graph scoped JWT for a Global Admin principal
+
+    .PARAMETER TimeOfTest
+        The Get-Date formatted time the test was performed
+
+    .EXAMPLE
+        C:\PS> Test-MGAddOwnerToNonRoleEligibleGroup `
+            -TestPrincipalId = "028362ca-90ae-41f2-ae9f-1a678cc17391" `
+            -TargetGroupId "b9801b7a-fcec-44e2-a21b-86cb7ec718e4" `
+            -TestToken $TestToken
+            -GlobalAdminMGToken $GlobalAdminMGToken
+
+        Description
+        -----------
+        Test whether the supplied JWT can add itself as a member to the group with object ID of "b9801b7a-fcec-44e2-a21b-86cb7ec718e4"
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TestPrincipalID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetGroupId,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TestToken,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $HeldPrivilege,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TimeOfTest,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TestGUID,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminMGToken
+        
+    )
+
+    # Test whether the SP can add itself to a non-role eligible security group
+    $body = @{
+        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($TestPrincipalID)"
+    }
+    $Success = $False
+    Try {
+        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/members/`$ref" `
+        -Method         POST `
+        -Body           $($body | ConvertTo-Json) `
+        -ContentType    'application/json'
+        $Success = $True
+    }
+    Catch {
+    }
+
+    # Return an object of the test result:
+    $AbuseTestResult = New-Object PSObject -Property @{
+        AbuseTestType           = "Add member to Non-Role Eligible group"
+        AbuseTestHeldPrivilege  = $HeldPrivilege
+        AbuseTestOutcome        = $null
+        AbuseTestDateTime       = $TimeOfTest
+        AbuseTestToken          = $TestToken
+    }
+
+    If ($Success) {
+        $AbuseTestResult.AbuseTestOutcome = "Success"
+    } Else {
+        $AbuseTestResult.AbuseTestOutcome = "Failure"
+    }
+    $AbuseTestResult
+}
+New-Variable -Name 'Test-MGAddMemberToNonRoleEligibleGroupDefinition' -Value (Get-Command -Name "Test-MGAddMemberToNonRoleEligibleGroup") -Force
+New-Variable -Name 'Test-MGAddMemberToNonRoleEligibleGroupAst' -Value (${Test-MGAddMemberToNonRoleEligibleGroupDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function Test-MGAddSecretToSP {
     <#
     .SYNOPSIS
