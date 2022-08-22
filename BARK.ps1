@@ -105,7 +105,16 @@ Function Get-AZRefreshTokenWithUsernamePassword {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -155,7 +164,16 @@ Function Get-MSGraphTokenWithUsernamePassword {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -205,7 +223,16 @@ Function Get-ARMTokenWithUsernamePassword {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -251,7 +278,16 @@ Function Get-MSGraphTokenWithClientCredentials {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -295,7 +331,16 @@ Function Get-MSGraphTokenWithRefreshToken {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -348,7 +393,16 @@ Function Get-MSGraphTokenWithPortalAuthRefreshToken {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -404,7 +458,16 @@ Function Get-ARMTokenWithPortalAuthRefreshToken {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -457,7 +520,16 @@ Function Get-AzureRMTokenWithClientCredentials {
     }
 
     if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
         $Body.Add("claims", $Claims)
     }
 
@@ -493,16 +565,25 @@ Function Get-ARMTokenWithRefreshToken {
         $UseCAE
     )
 
-    if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
-        $Body.Add("claims", $Claims)
-    }
-
     $Body = @{
         "grant_type"    =   "refresh_token"
         "refresh_token" =   $RefreshToken
         "scope"         =   "openid"
         "resource"      =   "https://management.core.windows.net"
+    }
+
+    if ($UseCAE) {
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
@@ -537,16 +618,25 @@ Function Get-AzurePortalTokenWithRefreshToken {
         $UseCAE
     )
 
-    if ($UseCAE) {
-        $Claims = ( @{"access_token" = @{ "xms_cc" = @{ "values" = @("cp1") } } } | ConvertTo-Json -Compress -Depth 99 )
-        $Body.Add("claims", $Claims)
-    }
-
     $Body = @{
         "grant_type"    =   "refresh_token"
         "refresh_token" =   $RefreshToken
         "scope"         =   "openid"
         "resource"      =   "74658136-14ec-4630-ad9b-26e160ff0fc6"
+    }
+
+    if ($UseCAE) {
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
+        $Body.Add("claims", $Claims)
     }
 
     $Token = Invoke-RestMethod `
