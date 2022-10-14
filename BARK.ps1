@@ -4503,8 +4503,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -AppRoleID $_.AppRoleID `
             -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
-        ) 
-    }
+        )
 
         #Wait 5 minutes for the role activation to take effect
         Start-Sleep 300s
