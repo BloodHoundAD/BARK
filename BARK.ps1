@@ -4506,136 +4506,136 @@ Function Invoke-AllAzureMGAbuseTests {
         ) 
     }
 
-        #Wait 5 minutes for the role activation to take effect
-        Start-Sleep 300s
+    #Wait 5 minutes for the role activation to take effect
+    Start-Sleep 300s
 
-        # Get test token
-        $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
-            -ClientID       $ThreadSafeSecret.AppRegAppId `
-            -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "specterdev.onmicrosoft.com"
-        )
+    # Get test token
+    $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
+        -ClientID       $ThreadSafeSecret.AppRegAppId `
+        -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
+        -TenantName     "specterdev.onmicrosoft.com"
+    )
 
-        $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddOwnerToNonRoleEligibleGroup} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddMemberToNonRoleEligibleGroup} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddSecretToSP} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddSecretToApp} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddMemberToRoleEligibleGroup} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
-            -TestPrincipalId    $ThreadSafeSP.SPObjectId `
-            -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfApp} `
+        -TestPrincipalId    $ThreadSafeSP.SPObjectId `
+        -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
-            -TestPrincipalId $ThreadSafeSP.SPObjectId `
-            -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddSelfAsOwnerOfSP} `
+        -TestPrincipalId $ThreadSafeSP.SPObjectId `
+        -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfToMGAppRole} `
-            -TestPrincipalId        $ThreadSafeSP.SPObjectId `
-            -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
-            -TestToken              $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege          $_.AppRoleValue `
-            -TestGUID               ${using:TestGUID} `
-            -TimeOfTest             $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
+    $ThreadSafeTest = (& ${global:Test-MGAddSelfToMGAppRole} `
+        -TestPrincipalId        $ThreadSafeSP.SPObjectId `
+        -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
+        -TestToken              $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege          $_.AppRoleValue `
+        -TestGUID               ${using:TestGUID} `
+        -TimeOfTest             $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
-            -TestPrincipalId $ThreadSafeSP.SPObjectId `
-            -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
-            -TestToken          $ThreadSafeTestToken.access_token `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
-            -TestGUID           ${using:TestGUID} `
-            -TimeOfTest         $(Get-Date)
-        )
-        $LocalTestResult = $using:MGTestResults
-        $LocalTestResult.Add($ThreadSafeTest)
-    }
+    $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+        -TestPrincipalId $ThreadSafeSP.SPObjectId `
+        -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
+        -TestToken          $ThreadSafeTestToken.access_token `
+        -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
+        -HeldPrivilege      $_.AppRoleValue `
+        -TestGUID           ${using:TestGUID} `
+        -TimeOfTest         $(Get-Date)
+    )
+    $LocalTestResult = $using:MGTestResults
+    $LocalTestResult.Add($ThreadSafeTest)
+
     $MGTestResults
 
 }
