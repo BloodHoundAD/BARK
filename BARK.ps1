@@ -6067,6 +6067,76 @@ Function Get-AllAzureRMAutomationAccounts {
 
 }
 
+Function Get-AllAzureRMKeyVaults {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Key Vaults under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Key Vaults under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Key Vaults
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Key Vaults under
+    
+    .EXAMPLE
+    C:\PS> $KeyVaults = Get-AllAzureRMKeyVaults -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Key Vaults under the subscription with ID starting with "839..." and put them into the $KeyVaults variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Key Vaults under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.KeyVault/vaults?api-version=2021-10-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $KeyVaultObjects += $Results.value
+        } else {
+            $KeyVaultObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $KeyVaultObjects
+
+}
+
 Function Get-AllAzureManagedIdentityAssignments {
     <#
     .SYNOPSIS
