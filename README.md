@@ -6,6 +6,18 @@ BARK stands for BloodHound Attack Research Kit. It is a PowerShell script built 
 
 BARK requires no third party dependencies. BARK's functions are designed to be as simple and maintainable as possible. Most functions are very simple wrappers for making requests to various REST API endpoints. BARK's basic functions do not even require each other - you can pull almost any BARK function out of BARK and it will work perfectly as a standalone function in your own scripts.
 
+Author and Contributors
+-----------------------
+
+Primary author:
+Andy Robbins [@_wald0](https://twitter.com/@_wald0)
+
+Contributors:
+Jonas Bülow Knudsen [@Jonas_B_K](https://twitter.com/Jonas_B_K)
+Fabian Bader [@fabian_bader](https://twitter.com/fabian_bader)
+CravateRouge [@CravateRouge](@https://github.com/CravateRouge)
+g60ocR [@g60ocR](https://github.com/g60ocR)
+
 Getting Started
 ---------------
 
