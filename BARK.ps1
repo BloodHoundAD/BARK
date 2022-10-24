@@ -6255,6 +6255,81 @@ Function New-AzureKeyVaultAccessPolicy {
 
 }
 
+Function Get-AzureRMKeyVaultSecrets {
+    <#
+    .SYNOPSIS
+        Lists available key vault secrets from a specified key vault. Returns IDs of secrets but not the secret itself.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Lists available key vault secrets from a specified key vault. Returns IDs of secrets but not the secret itself.
+
+    .PARAMETER KeyVaultURL
+        The URL of the target Key Vault
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to list key vault secrets against the target Key Vault
+
+    .EXAMPLE
+        C:\PS> Get-AzureRMKeyVaultSecrets `
+            -KeyVaultURL "https://keyvault-01.vault.azure.net" `
+            -Token $KVToken
+
+        Description
+        -----------
+        List the secrets stored in the key vault called keyvault-01
+
+    .INPUTS
+        String
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultURL,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "$($KeyVaultURL)/secrets?api-version=7.3" 
+
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $KeyVaultSecrets += $Results.value
+        } else {
+            $KeyVaultSecrets += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $KeyVaultSecrets
+
+}
+
 Function Get-AllAzureManagedIdentityAssignments {
     <#
     .SYNOPSIS
