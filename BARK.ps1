@@ -6349,7 +6349,7 @@ Function Get-AzureRMKeyVaultSecretValue {
         The Azure Key Vault service scoped JWT for a principal with the ability to read the value of secrets from the specified vault
 
     .EXAMPLE
-        C:\PS> New-AzureRMKeyVaultSecretValue `
+        C:\PS> Get-AzureRMKeyVaultSecretValue `
             -KeyVaultSecretID "https://keyvault-01.vault.azure.net/secrets/My-secret-value" `
             -Token $Token
 
