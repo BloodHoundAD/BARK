@@ -6349,7 +6349,7 @@ Function Get-AzureRMKeyVaultSecretValue {
         The Azure Key Vault service scoped JWT for a principal with the ability to read the value of secrets from the specified vault
 
     .EXAMPLE
-        C:\PS> Get-AzureRMKeyVaultSecretValue `
+        C:\PS> New-AzureRMKeyVaultSecretValue `
             -KeyVaultSecretID "https://keyvault-01.vault.azure.net/secrets/My-secret-value" `
             -Token $Token
 
@@ -6393,6 +6393,83 @@ Function Get-AzureRMKeyVaultSecretValue {
         -Method GET
 
     $KeyVaultSecretValue.Content | ConvertFrom-JSON
+
+}
+
+Function Get-AzureRMKeyVaultSecretVersions {
+    <#
+    .SYNOPSIS
+        Gets all versions of a specified Key Vault secret. You can retrieve historical secrets
+        by specifying the historical ID and feeding that to Get-AzureRMKeyVaultSecretValue
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Gets all versions of a specified Key Vault secret. You can retrieve historical secrets
+        by specifying the historical ID and feeding that to Get-AzureRMKeyVaultSecretValue
+
+    .PARAMETER KeyVaultSecretID
+        The URL of the target Key Vault secret
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to read the value of secrets from the specified vault
+
+    .EXAMPLE
+        C:\PS> Get-AzureRMKeyVaultSecretVersions `
+            -KeyVaultSecretID "https://keyvault-01.vault.azure.net/secrets/My-cool-secret" `
+            -Token $Token
+
+        Description
+        -----------
+        List the versions for the "My-cool-secret" secret within the "keyvault-01" vault
+
+    .INPUTS
+        String
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultSecretID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "$($KeyVaultSecretID)/versions?api-version=7.0"
+
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $KeyVaultSecretVersions += $Results.value
+        } else {
+            $KeyVaultSecretVersions += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $KeyVaultSecretVersions
 
 }
 
