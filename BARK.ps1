@@ -6330,6 +6330,72 @@ Function Get-AzureRMKeyVaultSecrets {
 
 }
 
+Function Get-AzureRMKeyVaultSecretValue {
+    <#
+    .SYNOPSIS
+        Gets the value of a specific Key Vault secret. You can optionally specify a secret version by appending this to the secret ID URL.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Gets the value of a specific Key Vault secret.
+
+    .PARAMETER KeyVaultSecretID
+        The URL of the target Key Vault secret
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to read the value of secrets from the specified vault
+
+    .EXAMPLE
+        C:\PS> New-AzureRMKeyVaultSecretValue `
+            -KeyVaultSecretID "https://keyvault-01.vault.azure.net/secrets/My-secret-value" `
+            -Token $Token
+
+        Description
+        -----------
+        Read the secret value of "My-secret-value" within the "keyvault-01" vault
+
+    .INPUTS
+        String
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultSecretID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "$($KeyVaultSecretID)/?api-version=7.0"
+
+    $KeyVaultSecretValue = Invoke-WebRequest `
+        -UseBasicParsing `
+        -URI $URI `
+        -Headers @{
+            "Authorization"="Bearer $($Token)"
+        } `
+        -Method GET
+
+    $KeyVaultSecretValue.Content | ConvertFrom-JSON
+
+}
+
 Function Get-AllAzureManagedIdentityAssignments {
     <#
     .SYNOPSIS
