@@ -6137,6 +6137,124 @@ Function Get-AllAzureRMKeyVaults {
 
 }
 
+Function New-AzureKeyVaultAccessPolicy {
+    <#
+    .SYNOPSIS
+        Grant a principal the "Get" and "List" permissions across secrets, keys, and certificates on a particular key vault.
+
+        TODO: Let the user specify with more granulaity what permissions they want to add.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Grant a principal the "Get" and "List" permissions across secrets, keys, and certificates on a particular key vault. You must wait at least 2 minutes before using the new access policy privilege: https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#known-limits-and-performance
+
+    .PARAMETER PrincipalID
+        The object ID of the existing AAD principal to which you are granting the Azure Key Vault access
+
+    .PARAMETER TenantID
+        The unique identifier of the AzureAD tenant the principal resides in
+
+    .PARAMETER TargetObjectID
+        The ID of the Azure Key Vault you are granting the access policy against
+
+    .PARAMETER Token
+        The AzureRM scoped JWT for a principal with the ability to add a new access policy to the target key vault
+
+    .EXAMPLE
+        C:\PS> New-AzureKeyVaultAccessPolicy `
+            -TargetObjectID "/subscriptions/7c669b03-41d0-4ed6-ac55-806bdcdfa84a/resourceGroups/KeyVaults/providers/Microsoft.KeyVault/vaults/KeyVault-01" `
+            -TenantID "d5ba96aa-6cf5-4a9e-a942-a949834d1e85" `
+            -PrincipalID "80634281-d7ea-4361-837c-22222637af9e" `
+            -Token $Token
+
+        Description
+        -----------
+        Give the principal with ID starting with "8063...", which resides in the tenant with ID starting with "d5ba...", "Get" and "List" access on the key vault "KeyVault-01"
+
+    .INPUTS
+        String
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PrincipalID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TenantID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetObjectID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $Body = @{
+      properties = @{
+        accessPolicies = @(
+          @{
+            tenantId = $TenantID
+            objectId = $PrincipalID
+            permissions = @{
+              keys = @(
+                "get"
+                "list"
+              )
+              secrets = @(
+                "get"
+                "list"
+              )
+              certificates = @(
+                "get"
+                "list"
+              )
+            }
+          }
+        )
+      }
+    }
+
+    $URI = "https://management.azure.com$($TargetObjectID)/accessPolicies/add?api-version=2021-10-01"
+
+    $AddKeyVaultReadAccess = Invoke-RestMethod `
+        -URI $URI `
+        -Method PUT `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+        } `
+        -ContentType "application/json" `
+        -Body ($Body | ConvertTo-Json -Depth 5)
+
+    $AddKeyVaultReadAccess
+
+}
+
 Function Get-AllAzureManagedIdentityAssignments {
     <#
     .SYNOPSIS
