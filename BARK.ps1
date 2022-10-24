@@ -649,6 +649,61 @@ Function Get-AzurePortalTokenWithRefreshToken {
 New-Variable -Name 'Get-AzurePortalTokenWithRefreshTokenDefinition' -Value (Get-Command -Name "Get-AzurePortalTokenWithRefreshToken") -Force
 New-Variable -Name 'Get-AzurePortalTokenWithRefreshTokenAst' -Value (${Get-AzurePortalTokenWithRefreshTokenDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function Get-AzureKeyVaultTokenWithClientCredentials {
+    <#
+    .DESCRIPTION
+    Uses client credentials to request a token from STS with Azure Vault specified as the resource/intended audience
+    #>
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $True)]
+        [string]
+        $ClientID,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $ClientSecret,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $TenantName,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
+    )
+
+    $Body = @{
+        Grant_Type      =   "client_credentials"
+        Scope           =   "https://vault.azure.net/.default"
+        client_Id       =   $ClientID
+        Client_Secret   =   $ClientSecret
+    }
+
+    if ($UseCAE) {
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
+        $Body.Add("claims", $Claims)
+    }
+
+    $Token = Invoke-RestMethod `
+        -URI    "https://login.microsoftonline.com/$TenantName/oauth2/v2.0/token" `
+        -Method POST `
+        -Body   $Body
+
+    $Token
+}
+New-Variable -Name 'Get-AzureKeyVaultTokenWithClientCredentialsDefinition' -Value (Get-Command -Name "Get-AzureKeyVaultTokenWithClientCredentials") -Force
+New-Variable -Name 'Get-AzureKeyVaultTokenWithClientCredentialsAst' -Value (${Get-AzureKeyVaultTokenWithClientCredentialsDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function Set-AZUserPassword {
     <#
     .SYNOPSIS
