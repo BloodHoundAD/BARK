@@ -1160,7 +1160,7 @@ Function Get-AzureRMRoleAssignments {
         
     )
 
-    $URI = "https://management.azure.com/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments?api-version=2018-01-01-preview"
+    $URI = "https://management.azure.com/$($TargetObjectID)/providers/Microsoft.Authorization/roleAssignments?api-version=2018-01-01-preview`$filter=atScope()"
 
     $AzureRMRoleAssignments = Invoke-RestMethod `
         -Headers        @{Authorization = "Bearer $($Token)"} `
