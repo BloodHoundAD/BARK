@@ -704,6 +704,65 @@ Function Get-AzureKeyVaultTokenWithClientCredentials {
 New-Variable -Name 'Get-AzureKeyVaultTokenWithClientCredentialsDefinition' -Value (Get-Command -Name "Get-AzureKeyVaultTokenWithClientCredentials") -Force
 New-Variable -Name 'Get-AzureKeyVaultTokenWithClientCredentialsAst' -Value (${Get-AzureKeyVaultTokenWithClientCredentialsDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function Get-AzureKeyVaultTokenWithUsernamePassword {
+    <#
+    .DESCRIPTION
+    Requests an Azure Key Vault-scoped JWT from STS. This will fail if your user has MFA requiremnts.
+    #>
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Username,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $Password,
+
+        [Parameter(Mandatory = $True)]
+        [string]
+        $TenantID,
+
+        [Parameter(Mandatory = $False)]
+        [Switch]
+        $UseCAE
+    )
+
+    $ClientID = "1b730954-1685-4b74-9bfd-dac224a7b894"
+
+    $Body = @{
+        Grant_Type    =   "password"
+        Scope         =   "https://vault.azure.net/.default"
+        Username      =   $Username
+        Password      =   $Password
+        Client_ID     =   $ClientID
+        
+    }
+
+    if ($UseCAE) {
+        $Claims = (
+            @{
+                "access_token" = @{
+                    "xms_cc" = @{
+                        "values" = @(
+                            "cp1"
+                        )
+                    }
+                }
+            } | ConvertTo-Json -Compress -Depth 3 )
+        $Body.Add("claims", $Claims)
+    }
+
+    $Token = Invoke-RestMethod `
+        -URI    "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+        -Method POST `
+        -Body   $Body
+
+    $Token
+}
+New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-AzureKeyVaultTokenWithUsernamePassword") -Force
+New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordAst' -Value (${Get-AzureKeyVaultTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function Set-AZUserPassword {
     <#
     .SYNOPSIS
