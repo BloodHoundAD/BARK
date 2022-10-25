@@ -2127,7 +2127,7 @@ function Invoke-AzureRMAbuseTests {
         # Create a secret for the test app reg:
         $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+            -Token $ThreadSafeGlobalAdminToken.access_token
         )
         # Wait 1 minute for the secret to propagate before granting the AzureRM role to the test SP:
         Start-Sleep 60s
@@ -2716,21 +2716,21 @@ Function New-AppRegSecret {
     .PARAMETER AppRegObjectId
         The object ID of the existing Application Registration object
 
-    .PARAMETER GlobalAdminMGToken
-        The MS-Graph scoped JWT for a Global Admin principal
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to add a secret to the target app registration
 
     .EXAMPLE
         C:\PS> $AppRegObjectId = "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae"
         C:\PS> New-AppRegSecret `
             -AppRegObjectId $AppRegObjectId
-            -GlobalAdminMGToken $GlobalAdminMGToken
+            -Token $Token
 
         Description
         -----------
         Create a new secret for the Application Registration with object ID of "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae"
 
     .EXAMPLE
-        C:\PS> New-TestAppReg -DisplayName "MyCoolApp" -GlobalAdminMGToken $GlobalAdminToken.access_token | New-AppRegSecret -GlobalAdminMGToken $GlobalAdminToken.access_token
+        C:\PS> New-TestAppReg -DisplayName "MyCoolApp" -Token $GlobalAdminToken.access_token | New-AppRegSecret -Token $GlobalAdminToken.access_token
 
         Description
         -----------
@@ -2757,13 +2757,13 @@ Function New-AppRegSecret {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $GlobalAdminMGToken
+        $Token
         
     )
 
     # Get the Application Registration's App ID
     $AppReg = Invoke-RestMethod `
-        -Headers        @{Authorization = "Bearer $($GlobalAdminMGToken)" } `
+        -Headers        @{Authorization = "Bearer $($Token)" } `
         -URI            "https://graph.microsoft.com/v1.0/applications/$($AppRegObjectID)" `
         -Method         GET `
         -ContentType    'application/json'
@@ -2773,7 +2773,7 @@ Function New-AppRegSecret {
         displayName = "My cool password"
     }
     $AppRegSecret = Invoke-RestMethod `
-        -Headers @{Authorization = "Bearer $($GlobalAdminMGToken)" } `
+        -Headers @{Authorization = "Bearer $($Token)" } `
         -URI            "https://graph.microsoft.com/v1.0/applications/$($AppRegObjectID)/addPassword" `
         -Method         POST `
         -Body           $($body | ConvertTo-Json) `
@@ -2805,14 +2805,14 @@ Function New-ServicePrincipalSecret {
     .PARAMETER ServicePrincipalID
         The object ID of the existing Service Principal
 
-    .PARAMETER GlobalAdminMGToken
-        The MS-Graph scoped JWT for a Global Admin principal
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to add a new secret to the target service principal
 
     .EXAMPLE
         C:\PS> $ServicePrincipalID = "71c9f3d1-a6ef-4c3a-b5d7-bb668a16a61c"
         C:\PS> New-ServicePrincipalSecret `
             -ServicePrincipalID $ServicePrincipalID
-            -GlobalAdminMGToken $GlobalAdminMGToken
+            -Token $Token
 
         Description
         -----------
@@ -2839,13 +2839,13 @@ Function New-ServicePrincipalSecret {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $GlobalAdminMGToken
+        $Token
         
     )
 
     # Get the Service Principal's App ID
     $ServicePrincipal = Invoke-RestMethod `
-        -Headers        @{Authorization = "Bearer $($GlobalAdminMGToken)" } `
+        -Headers        @{Authorization = "Bearer $($Token)" } `
         -URI            "https://graph.microsoft.com/v1.0/servicePrincipals/$($ServicePrincipalID)" `
         -Method         GET `
         -ContentType    'application/json'
@@ -2855,7 +2855,7 @@ Function New-ServicePrincipalSecret {
         displayName = "My cool password"
     }
     $ServicePrincipalSecret = Invoke-RestMethod `
-        -Headers        @{Authorization = "Bearer $($GlobalAdminMGToken)" } `
+        -Headers        @{Authorization = "Bearer $($Token)" } `
         -URI            "https://graph.microsoft.com/v1.0/servicePrincipals/$($ServicePrincipalID)/addPassword" `
         -Method         POST `
         -Body           $($body | ConvertTo-Json) `
@@ -4547,7 +4547,7 @@ Function Invoke-AllAzureMGAbuseTests {
         # Create a secret for the test app reg:
         $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+            -Token $ThreadSafeGlobalAdminToken.access_token
         )
         # Wait 1 minute for the secret to propagate before granting the MS Graph app role to the test app:
         Start-Sleep 60s
@@ -4863,7 +4863,7 @@ Function Invoke-AllAzureADAbuseTests {
         # Create a secret for the test app reg:
         $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+            -Token $ThreadSafeGlobalAdminToken.access_token
         )
         # Wait 1 minute for the secret to propagate before granting the MS Graph app role to the test app:
         Start-Sleep 60s
