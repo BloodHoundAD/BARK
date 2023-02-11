@@ -7587,3 +7587,79 @@ Function Get-TierZeroServicePrincipals {
     
     $TierZeroServicePrincipals
 }
+
+Function Get-AllAzureRMWebApps {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure App Service web apps under a particular subscription using the Azure management API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure App Service web apps under a particular subscription using the Azure management API
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Azure App Service web apps
+
+    .PARAMETER SubscriptionID
+        The unique identifier of the subscription you want to list Azure App Service web apps under
+    
+    .EXAMPLE
+    C:\PS> $WebApps = Get-AllAzureRMWebApps -Token $Token -SubscriptionID "839df4bc-5ac7-441d-bb5d-26d34bca9ea4"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Azure App Service web apps under the subscription with ID starting with "839..." and put them into the $WebApps variable
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $SubscriptionID
+    )
+
+    # Get all Azure App Service web apps under a specified subscription
+    $URI = "https://management.azure.com/subscriptions/$($SubscriptionID)/providers/Microsoft.Web/sites?api-version=2022-03-01"
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $Results.value | %{
+                If ($_.kind -Like "app") {
+                    $WebAppObjects += $_
+                }
+            }
+        } else {
+            IF ($_.kind -Like "app") {
+                $WebAppObjects += $_
+            }
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $WebAppObjects
+
+}
