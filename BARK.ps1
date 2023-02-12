@@ -7663,3 +7663,71 @@ Function Get-AllAzureRMWebApps {
     $WebAppObjects
 
 }
+
+Function Get-AzureRMWebAppPublishingCredentials {
+    <#
+    .SYNOPSIS
+        Retrieve publishing credentials stored on an Azure App Service Web App. These credentials can then be used to execute system commands on the web app host.
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieve publishing credentials stored on an Azure App Service Web App. These credentials can then be used to execute system commands on the web app host.
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to read publishing credentials from the specified Web App.
+
+    .PARAMETER WebAppID
+        The unique identifier of the Azure App Service Web App you want to read publishing credentials from
+    
+    .EXAMPLE
+    C:\PS> $WebAppCreds = Get-AzureRMWebAppPublishingCredentials -Token $Token -WebAppID "/subscriptions/0780fe34-8613-4c8b-89c3-b4e53f51077e/resourceGroups/WebApp_RG/providers/Microsoft.Web/sites/mycoolwebapp"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all publishing credentials stored on the Azure App Service Web Apps specified with the WebAppID parameter
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $WebAppID
+    )
+
+    # Get the publishing credentials stored on the specified Azure App Service Web App
+    $Request = Invoke-WebRequest `
+        -UseBasicParsing `
+        -Uri "https://management.azure.com$($WebAppID)/config/publishingcredentials/list?api-version=2018-11-01" `
+        -Method "POST" `
+        -Headers @{
+            "authorization"="Bearer $($Token)"
+        } `
+        -ContentType "application/json"
+
+    $Results = $Request.Content | ConvertFrom-JSON
+
+    $PublishingCred = New-Object PSObject
+
+    $PublishingCred | Add-Member Noteproperty 'Username' $Results.properties.publishingUserName
+    $PublishingCred | Add-Member Noteproperty 'Password' $Results.properties.publishingPassword
+    $PublishingCred | Add-Member Noteproperty 'DeploymentURI' $Results.properties.scmUri
+
+    $PublishingCred
+
+}
