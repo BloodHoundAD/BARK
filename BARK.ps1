@@ -2849,6 +2849,84 @@ Function New-AppRegSecret {
 New-Variable -Name 'New-AppRegSecretDefinition' -Value (Get-Command -Name "New-AppRegSecret") -Force
 New-Variable -Name 'New-AppRegSecretAst' -Value (${New-AppRegSecretDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function Get-ServicePrincipalOwner {
+    <#
+    .SYNOPSIS
+        List the current owner(s) of an AzureAD Service Principal
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        List the current owner(s) of an AzureAD Service Principal
+
+    .PARAMETER ServicePrincipalObjectId
+        The object ID of the target Service Principal - NOT the app id.
+
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to read Service Principal owners. By default
+        any authenticated user can read this information without any special privileges.
+
+    .EXAMPLE
+        C:\PS> Get-ServicePrincipalOwner `
+            -ServicePrincipalObjectId 'd9786def-03b9-458a-8ba1-3af3a25745de' `
+            -Token $Token
+
+        Description
+        -----------
+        List the owner(s) of the Service Principal with object ID of 'd9786def-03b9-458a-8ba1-3af3a25745de'.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list-owners?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $ServicePrincipalObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "https://graph.microsoft.com/v1.0/servicePrincipals/$($ServicePrincipalObjectId)/owners"
+    $Results = $null
+    $SPOwners = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $SPOwners += $Results.value
+        } else {
+            $SPOwners += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $SPOwners
+}
+New-Variable -Name 'Get-ServicePrincipalOwnerDefinition' -Value (Get-Command -Name "Get-ServicePrincipalOwner") -Force
+New-Variable -Name 'Get-ServicePrincipalOwnerAst' -Value (${Get-ServicePrincipalOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function New-ServicePrincipalOwner {
     <#
     .SYNOPSIS
