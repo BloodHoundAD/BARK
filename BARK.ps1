@@ -3100,7 +3100,7 @@ Function New-AppOwner {
         The object ID of the target app - NOT the app id.
 
     .PARAMETER NewOwnerObjectId
-        The object ID of the principal you want to add as a new owner to the target Service Principal
+        The object ID of the principal you want to add as a new owner to the target App
 
     .PARAMETER Token
         The MS-Graph scoped JWT for a principal with the ability to add an owner to the target App
