@@ -8015,7 +8015,7 @@ Function Invoke-AzureRMWebAppShellCommand {
         }
         $Request = Invoke-WebRequest `
             -UseBasicParsing `
-            -Uri $URI `
+            -Uri $KuduURI `
             -Method "POST" `
             -WebSession $session `
             -Headers @{
@@ -8045,7 +8045,7 @@ Function Invoke-AzureRMWebAppShellCommand {
         }
         $Request = Invoke-WebRequest `
             -UseBasicParsing `
-            -Uri $URI `
+            -Uri $KuduURI `
             -Method "POST" `
             -WebSession $session `
             -Headers @{
