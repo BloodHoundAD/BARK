@@ -2849,6 +2849,85 @@ Function New-AppRegSecret {
 New-Variable -Name 'New-AppRegSecretDefinition' -Value (Get-Command -Name "New-AppRegSecret") -Force
 New-Variable -Name 'New-AppRegSecretAst' -Value (${New-AppRegSecretDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function New-ServicePrincipalOwner {
+    <#
+    .SYNOPSIS
+        Add a new owner to a Service Principal
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Attempts to add a new owner to an AzureAD Service Principal using the MS Graph API
+
+    .PARAMETER ServicePrincipalObjectId
+        The object ID of the target Service Principal - NOT the app id.
+
+    .PARAMETER NewOwnerObjectId
+        The object ID of the principial you want to add as a new owner to the target Service Principal
+
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to add an owner to the target Service Principal
+
+    .EXAMPLE
+        C:\PS> New-ServicePrincipalOwner `
+            -ServicePrincipalObjectId 'd9786def-03b9-458a-8ba1-3af3a25745de' `
+            -NewOwnerObjectId '834f2b4d-1f9c-4897-92ea-4ecb7fe063a0' `
+            -Token $Token
+
+        Description
+        -----------
+        Attempt to add the principal with ID of '834f2b4d-1f9c-4897-92ea-4ecb7fe063a0' as a new owner
+        to the Service Principal with object ID of 'd9786def-03b9-458a-8ba1-3af3a25745de'.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-owners?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $ServicePrincipalObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $NewOwnerObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $body = @{
+        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($NewOwnerObjectId)"
+    }
+    Invoke-RestMethod `
+        -Headers @{Authorization = "Bearer $($Token)" } `
+        -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($ServicePrincipalObjectId)/owners/`$ref" `
+        -Method POST `
+        -Body $($body | ConvertTo-Json) `
+        -ContentType 'application/json'
+
+}
+New-Variable -Name 'New-ServicePrincipalOwnerDefinition' -Value (Get-Command -Name "New-ServicePrincipalOwner") -Force
+New-Variable -Name 'New-ServicePrincipalOwnerAst' -Value (${New-ServicePrincipalOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function New-ServicePrincipalSecret {
     <#
     .SYNOPSIS
