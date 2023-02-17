@@ -3081,8 +3081,8 @@ Function Get-AppOwner {
 
     $AppOwners
 }
-New-Variable -Name 'Get-ServicePrincipalOwnerDefinition' -Value (Get-Command -Name "Get-ServicePrincipalOwner") -Force
-New-Variable -Name 'Get-ServicePrincipalOwnerAst' -Value (${Get-ServicePrincipalOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+New-Variable -Name 'Get-AppOwnerDefinition' -Value (Get-Command -Name "Get-AppOwner") -Force
+New-Variable -Name 'Get-AppOwnerAst' -Value (${Get-AppOwnerDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function New-AppOwner {
     <#
