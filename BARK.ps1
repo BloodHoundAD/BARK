@@ -3163,6 +3163,163 @@ Function New-AppOwner {
 New-Variable -Name 'New-AppOwnerDefinition' -Value (Get-Command -Name "New-AppOwner") -Force
 New-Variable -Name 'New-AppOwnerAst' -Value (${New-AppOwnerDefinition}.ScriptBlock.Ast.Body) -Force
 
+Function Get-GroupOwner {
+    <#
+    .SYNOPSIS
+        List the current owner(s) of an AzureAD Group
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        List the current owner(s) of an AzureAD Group
+
+    .PARAMETER GroupObjectId
+        The object ID of the target Group
+
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to read Group owners. By default
+        any authenticated user can read this information without any special privileges.
+
+    .EXAMPLE
+        C:\PS> Get-GroupOwner `
+            -GroupObjectId '352032bf-161d-4788-b77c-b6f935339770' `
+            -Token $Token
+
+        Description
+        -----------
+        List the owner(s) of the Group with object ID of '352032bf-161d-4788-b77c-b6f935339770'.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GroupObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "https://graph.microsoft.com/v1.0/groups/$($GroupObjectId)/owners"
+    $Results = $null
+    $GroupOwners = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $GroupOwners += $Results.value
+        } else {
+            $GroupOwners += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $GroupOwners
+}
+New-Variable -Name 'Get-GroupOwnerDefinition' -Value (Get-Command -Name "Get-GroupOwner") -Force
+New-Variable -Name 'Get-GroupOwnerAst' -Value (${Get-GroupOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+
+Function New-GroupOwner {
+    <#
+    .SYNOPSIS
+        Add a new owner to an AzureAD Group
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Attempts to add a new owner to an AzureAD Group using the MS Graph API
+
+    .PARAMETER GroupObjectId
+        The object ID of the target Group
+
+    .PARAMETER NewOwnerObjectId
+        The object ID of the principal you want to add as a new owner to the target Group
+
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to add an owner to the target Group
+
+    .EXAMPLE
+        C:\PS> New-GroupOwner `
+            -GroupObjectId '352032bf-161d-4788-b77c-b6f935339770' `
+            -NewOwnerObjectId '834f2b4d-1f9c-4897-92ea-4ecb7fe063a0' `
+            -Token $Token
+
+        Description
+        -----------
+        Attempt to add the principal with ID of '834f2b4d-1f9c-4897-92ea-4ecb7fe063a0' as a new owner
+        to the Group with object ID of '352032bf-161d-4788-b77c-b6f935339770'.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/group-post-owners?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GroupObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $NewOwnerObjectId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $body = @{
+        "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($NewOwnerObjectId)"
+    }
+    Invoke-RestMethod `
+        -Headers @{Authorization = "Bearer $($Token)" } `
+        -Uri "https://graph.microsoft.com/v1.0/groups/$($GroupObjectId)/owners/`$ref" `
+        -Method POST `
+        -Body $($body | ConvertTo-Json) `
+        -ContentType 'application/json'
+
+}
+New-Variable -Name 'New-GroupOwnerDefinition' -Value (Get-Command -Name "New-GroupOwner") -Force
+New-Variable -Name 'New-GroupOwnerAst' -Value (${New-GroupOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function New-ServicePrincipalSecret {
     <#
     .SYNOPSIS
