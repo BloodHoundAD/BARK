@@ -3414,11 +3414,11 @@ Function New-AppRoleAssignment {
     .PARAMETER ResourceID
         The object ID of the AzureAD resource app (service principal) the App Role is scoped against
 
-    .PARAMETER GlobalAdminMGToken
-        The MS-Graph scoped JWT for a Global Admin principal
+    .PARAMETER Token
+        The MS-Graph scoped JWT for a principal with the ability to grant app roles
 
     .EXAMPLE
-        C:\PS> New-AppRoleAssignment -SPObjectId "6b6f9289-fe92-4930-a331-9575e0a4c1d8" -AppRoleID "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" -GlobalAdminMGToken $GlobalAdminToken.access_token
+        C:\PS> New-AppRoleAssignment -SPObjectId "6b6f9289-fe92-4930-a331-9575e0a4c1d8" -AppRoleID "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" -Token $GlobalAdminToken.access_token
 
         Description
         -----------
@@ -3461,7 +3461,7 @@ Function New-AppRoleAssignment {
             ValueFromPipelineByPropertyName = $True
         )]
         [String]
-        $GlobalAdminMGToken
+        $Token
         
     )
 
@@ -3473,7 +3473,7 @@ Function New-AppRoleAssignment {
         startTime   = "2020-01-01T12:00:00Z" # This field is required or the API call will fail. The value does not matter.
         expiryTime  = "2023-01-01T10:00:00Z" # This field is required or the API call will fail. The value does not matter.
     }
-    $GrantAppRole = Invoke-RestMethod -Headers @{Authorization = "Bearer $($GlobalAdminMGToken)" } `
+    $GrantAppRole = Invoke-RestMethod -Headers @{Authorization = "Bearer $($Token)" } `
         -Uri            "https://graph.microsoft.com/v1.0/servicePrincipals/$($SPObjectId)/appRoleAssignedTo" `
         -Method         POST `
         -Body           $($body | ConvertTo-Json) `
@@ -5078,7 +5078,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -SPObjectID $ThreadSafeSP.SPObjectId `
             -AppRoleID $_.AppRoleID `
             -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" `
-            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+            -Token $ThreadSafeGlobalAdminToken.access_token
         )
 
         #Wait 5 minutes for the role activation to take effect
