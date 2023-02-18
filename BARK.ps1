@@ -2509,6 +2509,52 @@ Function Remove-AbuseTestServicePrincipals {
     }
 }
 
+Function Get-AzureADAdminRoleTemplates {
+    <#
+    .SYNOPSIS
+        Gets the list of AzureAD admin roles
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Gets the list of AzureAD admin roles
+
+    .PARAMETER Token
+        An MS-Graph scoped JWT for an AAD principal
+
+    .EXAMPLE
+        PS C:\> $AADRoles = Get-AzureADAdminRoleTemplates -Token $MGToken
+
+        Description
+        -----------
+        Puts all AzureAD admin roles into the $AADRoles variable
+
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    $URI = 'https://graph.microsoft.com/v1.0/directoryRoleTemplates'
+    $Request = $null
+    $Request = Invoke-RestMethod `
+        -Headers @{Authorization = "Bearer $($Token)"} `
+        -URI $URI `
+        -Method GET
+    $AzureADRoleTemplates = $Request.value
+
+    $AzureADRoleTemplates
+}
+
 Function Get-MGAppRoles {
     <#
     .SYNOPSIS
