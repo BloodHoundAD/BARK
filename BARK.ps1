@@ -2551,16 +2551,7 @@ Function Get-MGAppRoles {
         -URI $URI `
         -Method GET
 
-    ForEach ($Role in $MSGraphSP.value.appRoles) {
-        # Return an object of the app role
-        $AppRole = New-Object PSObject -Property @{
-            AppRoleScope        = $AppRegCreation.id
-            AppRoleValue        = $Role.value
-            AppRoleDisplayName  = $Role.displayName
-            AppRoleID           = $Role.id
-        }
-        $AppRole
-    }
+    $MSGraphSP.value.appRoles
 }
 
 Function New-TestAppReg {
