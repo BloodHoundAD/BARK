@@ -8492,3 +8492,106 @@ Function Get-AllAzureRMAKSClusters {
     $AKSClusterObjects
 
 }
+
+Function Invoke-AzureRMAKSRunCommand {
+    <#
+    .SYNOPSIS
+        Instructs the AKS cluster to execute a command via the /runCommand endpoint
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        When you submit a command to the AKS /runCommand endpoint, the cluster will spin up
+        a job execution pod, run the command, and make the output available to you at a
+        different URL provided in the headers of the original request
+
+    .PARAMETER TargetAKSId
+        The unique identifier of the Azure Kubenertes Service cluster
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the principal with the ability to run a command on the cluster
+
+    .PARAMETER Command
+        The command you want to run on the cluster pod.
+
+    .EXAMPLE
+        C:\PS> Invoke-AzureRMAKSRunCommand `
+            -Token $ARMToken `
+            -TargetAKSId "/subscriptions/f1816681-4df5-4a31-acfa-922401687008/resourcegroups/AKS_ResourceGroup/providers/Microsoft.ContainerService/managedClusters/mykubernetescluster" `
+            -Command "whoami"
+
+        Description
+        -----------
+        Attempts to run "whoami" on a job execution pod via the AKS cluster runCommand endpoint
+
+    .LINK
+        https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetAKSId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        $Command
+
+    )
+
+    $URL = "https://management.azure.com/$($TargetAKSId)/runCommand?api-version=2022-11-01"
+
+    $Body = @{
+        command = $Command
+        context = ""
+        clusterToken = ""
+    }
+
+
+    $RunCommandRequest = Invoke-RestMethod `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+        } `
+        -Uri $URL `
+        -Method POST `
+        -Body $($Body | ConvertTo-Json) `
+        -ContentType "application/json" `
+        -ResponseHeadersVariable "Headers"
+    
+    [String]$Location = $Headers.Location
+    
+    $RefreshAttempts = 0
+    Do {
+        $AsyncJob = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -Uri $Location `
+            -Method GET
+        $RefreshAttempts++
+        Start-Sleep -s 6
+    } Until (
+        $AsyncJob.properties.provisioningState -Like "Succeeded" -Or $RefreshAttempts -GT 30
+    )
+    
+    $CommandOutput = $AsyncJob.properties.logs
+
+    $CommandOutput
+
+}
