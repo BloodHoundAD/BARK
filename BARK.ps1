@@ -8740,3 +8740,104 @@ Function Get-AllAzureRMVMScaleSetsVMs {
     $VMScaleSetVMObjects
 
 }
+
+Function Invoke-AzureVMScaleSetVMRunCommand {
+    <#
+    .SYNOPSIS
+        Executes a command on the specified VM Scale Set Virtual Machine via its /runCommand endpoint
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Executes a command on the specified VM Scale Set Virtual Machine via its /runCommand endpoint
+
+    .PARAMETER TargetVMScaleSetVMId
+        The unique identifier of the Azure Kubenertes Service cluster
+
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the principal with the ability to run a command on the VM Scale Set Virtual Machine
+
+    .PARAMETER Command
+        The command you want to run on the VMSS Virtual Machine
+
+    .EXAMPLE
+        C:\PS> Invoke-AzureVMScaleSetVMRunCommand `
+            -Token $ARMToken `
+            -TargetVMScaleSetVMId "subscriptions/bf510275-8a83-4932-988f-1b148b83f832/resourceGroups/MC_BHE_SpecterDev_AKS_RG_mykubernetescluster_centralus/providers/Microsoft.Compute/virtualMachineScaleSets/aks-agentpool-81263570-vmss/virtualmachines/2" `
+            -Command "whoami"
+
+        Description
+        -----------
+        Attempts to run "whoami" on a VMSS Virtual Machine
+
+    .LINK
+        https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TargetVMScaleSetVMId,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        $Command
+
+    )
+
+    $URL = "https://management.azure.com/$($TargetVMScaleSetVMId)/runCommand?api-version=2022-11-01"
+    
+    $Body = @{
+        commandId = "RunShellScript"
+        script = @(
+            $Command
+        )
+    }
+    
+    $VMSSRunCommandRequest = Invoke-RestMethod `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+        } `
+        -Uri $URL `
+        -Method POST `
+        -Body $($Body | ConvertTo-Json) `
+        -ContentType "application/json" `
+        -ResponseHeadersVariable "Headers"
+    
+    [String]$Location = $Headers.Location
+    
+    $RefreshAttempts = 0
+    Do {
+        $AsyncJob = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -Uri $Location `
+            -Method GET
+        $RefreshAttempts++
+        Start-Sleep -s 6
+    } Until (
+        $AsyncJob.value.code -Like "ProvisioningState/succeeded" -Or $RefreshAttempts -GT 30
+    )
+    
+    $CommandOutput = $AsyncJob.value.message
+
+    $CommandOutput
+
+}
