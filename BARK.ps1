@@ -8666,3 +8666,77 @@ Function Get-AllAzureRMVMScaleSets {
     $VMSSObjects
 
 }
+
+Function Get-AllAzureRMVMScaleSetsVMs {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Virtual Machines under a specified Virtual Machine Scale Set
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Virtual Machines under a specified Virtual Machine Scale Set
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Virtual Machines under VM Scale Sets
+
+    .PARAMETER VMScaleSetID
+        The unique identifier of the Virtual Machine Scale Set you want to list Virtual Machines under
+    
+    .EXAMPLE
+    C:\PS> $VMScaleSetVMs = Get-AllAzureRMVMScaleSetsVMs `
+        -Token $Token `
+        -VMScaleSetID "/subscriptions/15cb2d86-343b-49b9-9256-7c2e6975b92d/resourceGroups/MyResourceGroup/providers/Microsoft.Compute/virtualMachineScaleSets/aks-agentpool-81263570-vmss"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list all Virtual Machines under the specified VM Scale Set
+    
+    .LINK
+        https://www.netspi.com/blog/technical/cloud-penetration-testing/extract-credentials-from-azure-kubernetes-service/
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $VMScaleSetID
+    )
+
+    # Get all Virtual Machines under the specified VM Scale Set
+
+    $URI = "https://management.azure.com$($VMScaleSetID)/virtualMachines?api-version=2022-11-01"
+
+    $Results = $null
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $VMScaleSetVMObjects += $Results.value
+        } else {
+            $VMScaleSetVMObjects += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $VMScaleSetVMObjects
+
+}
