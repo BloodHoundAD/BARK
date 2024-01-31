@@ -5999,6 +5999,70 @@ Function Get-AllAzureADServicePrincipals {
 
 }
 
+Function Get-AzureADServicePrincipal {
+    <#
+    .SYNOPSIS
+        Retrieves the JSON-formatted Azure AD service principal objects specified by its object ID
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves the JSON-formatted Azure AD service principal objects specified by its object ID
+    
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the user with read access to AzureAD service principals
+
+    .PARAMETER ObjectID
+        The object ID (NOT the app id) of the service principal
+    
+    .EXAMPLE
+    C:\PS> $ServicePrincipal = Get-AzureADServicePrincipal `
+        -Token $Token
+        -ObjectID "3e5d6a11-0898-4c1f-ab69-c10115770e57"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to fetch the service principal with object id starting with "3e5..."
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $ObjectID
+    )
+
+    # Get the service principal
+    $URI = "https://graph.microsoft.com/beta/servicePrincipals/$($ObjectID)"
+    $ServicePrincipal = Invoke-RestMethod `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+            ConsistencyLevel = "eventual"
+        } `
+        -URI $URI `
+        -UseBasicParsing `
+        -Method "GET" `
+        -ContentType "application/json"
+
+    $ServicePrincipal
+
+}
+
 Function Get-AllAzureADUsers {
     <#
     .SYNOPSIS
