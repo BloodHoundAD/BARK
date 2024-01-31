@@ -7534,6 +7534,146 @@ Function New-PowerShellFunctionAppFunction {
     }
 }
 
+Function Get-AzureFunctionAppFunctions {
+    <#
+    .SYNOPSIS
+        Retrieves all JSON-formatted Azure RM Function App functions under a particular function app
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves all JSON-formatted Azure RM Function App functions under a particular function app
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Function App functions
+
+    .PARAMETER PathToFunctionApp
+        The full URL path to the function app
+
+    .EXAMPLE
+        Get-AzureFunctionAppFunctions `
+            -Token $ARMToken `
+            -PathToFunctionApp "https://management.azure.com/subscriptions/f5e4c53c-7ff4-41ec-ad4a-00f512eb2dcf/resourceGroups/BHE_SpecterDev_FA_RG/providers/Microsoft.Web/sites/MyCoolFunctionApp"
+
+        Retrieve the list of functions under the specified function app
+
+    .LINK
+        https://medium.com/p/300065251cbe
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PathToFunctionApp
+    )
+
+    # Get the functions for the specified Function App
+    $Request = Invoke-WebRequest -URI "$($PathToFunctionApp)/functions?api-version=2018-11-01" `
+        -Method "GET" `
+        -Headers @{
+            "Authorization"="Bearer $($Token)"
+        } 
+        
+        $FunctionAppFunctions = ($Request.Content | ConvertFrom-JSON).value
+
+    $FunctionAppFunctions
+
+}
+
+Function Get-AzureFunctionAppFunctionFile {
+    <#
+    .SYNOPSIS
+        Retrieves the raw file (usually source code) of a function app function
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves the raw file (usually source code) of a function app function
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to list Function App functions
+
+    .PARAMETER PathToFunctionApp
+        The full URL path to the function app
+
+    .PARAMETER FileName
+        The name of the file in the function app to retrieve, "run.ps1" for example
+
+    .EXAMPLE
+        Get-AzureFunctionAppFunctionFile `
+            -Token $ARMToken `
+            -PathToFunctionApp "https://management.azure.com/subscriptions/f5e4c53c-7ff4-41ec-ad4a-00f512eb2dcf/resourceGroups/BHE_SpecterDev_FA_RG/providers/Microsoft.Web/sites/MyCoolFunctionApp" `
+            -Function "HttpTrigger1" `
+            -FileName "run.ps1"
+
+        Retrieve the "run.ps1" file associated with the specified function app function
+    .LINK
+        https://medium.com/p/300065251cbe
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $PathToFunctionApp,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $FunctionName,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $FileName
+    )
+
+    # Get the file from the specified Function App
+    $Request = Invoke-WebRequest -URI "$($PathToFunctionApp)/hostruntime/admin/vfs//$($FunctionName)/$($FileName)?relativePath=1&api-version=2018-11-01" `
+        -Method "GET" `
+        -Headers @{
+            "Authorization"="Bearer $($Token)"
+        } 
+        
+        $FunctionAppFile = [System.Text.Encoding]::UTF8.GetString($Request.Content)
+
+    $FunctionAppFile
+
+}
+
 Function Get-AzureFunctionAppMasterKeys {
     <#
     .SYNOPSIS
