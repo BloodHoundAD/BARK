@@ -8300,6 +8300,64 @@ Function Get-TierZeroServicePrincipals {
     $TierZeroServicePrincipals
 }
 
+Function Get-AzureRMWebApp {
+    <#
+    .SYNOPSIS
+        Retrieves the specified JSON-formatted Azure App Service web app
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Retrieves the specified JSON-formatted Azure App Service web app
+    
+    .PARAMETER Token
+        The AzureRM-scoped JWT for the user with the ability to retrieve the web app
+
+    .PARAMETER WebAppID
+        The unique identifier of the web app you want to fetch
+    
+    .EXAMPLE
+    C:\PS> $WebApp = Get-AzureRMWebApp -Token $Token -WebAppID "/subscriptions/6da4e9d4-c2bc-42a7-b5e3-f2f905db4a34/resourceGroups/WebApps/providers/Microsoft.Web/sites/MyCoolWebApp"
+    
+    .LINK
+        https://medium.com/p/74aee1006f48
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $WebAppID
+    )
+
+    # Get the specified Azure App Service web app
+    $URI = "https://management.azure.com/$($WebAppID)?api-version=2022-03-01"
+
+    $WebAppObject = Invoke-RestMethod `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+        } `
+        -URI $URI `
+        -UseBasicParsing `
+        -Method "GET" `
+        -ContentType "application/json"
+        
+    $WebAppObject
+
+}
+
 Function Get-AllAzureRMWebApps {
     <#
     .SYNOPSIS
