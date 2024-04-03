@@ -1177,7 +1177,7 @@ Function Get-AllEntraUsers {
         Retrieves all JSON-formatted Entra users objects using the MS Graph API
     
     .PARAMETER Token
-        The MS Graph-scoped JWT for the user with read access to AzureAD users
+        The MS Graph-scoped JWT for the user with read access to Entra users
     
     .EXAMPLE
     C:\PS> $Users = Get-AllEntraUsers -Token $Token -ShowProgress
@@ -1400,7 +1400,7 @@ Function Get-EntraAdminRoleTemplates {
         Gets the list of Entra admin roles
 
     .PARAMETER Token
-        An MS-Graph scoped JWT for an AAD principal
+        An MS-Graph scoped JWT for an Entra principal
 
     .EXAMPLE
         PS C:\> $EntraRoles = Get-EntraAdminRoleTemplates -Token $MGToken
@@ -2427,10 +2427,10 @@ Function New-EntraAppRoleAssignment {
         Grants an App Role assignment to an existing Entra Service Principal
 
     .PARAMETER SPObjectID
-        The object ID of the existing AAD Service Principal to which you are granting the App Role
+        The object ID of the existing Entra Service Principal to which you are granting the App Role
 
     .PARAMETER AppRoleID
-        The ID of the App Role you are granting to the AAD Service Principal
+        The ID of the App Role you are granting to the Entra Service Principal
 
     .PARAMETER ResourceID
         The object ID of the Entra resource app (service principal) the App Role is scoped against
@@ -2534,7 +2534,7 @@ Function Get-AzureRMRoleDefinitions {
         Collects all roles available in AzureRM at the subscription object level
 
     .PARAMETER Token
-        An AzureRM scoped JWT for an AAD principal
+        An AzureRM scoped JWT for an Entra principal
 
     .PARAMETER SubscriptionID
         The unique identifier for your target subscription
@@ -4176,13 +4176,13 @@ Function New-AzureRMRoleAssignment {
         Required Dependencies: None
 
     .DESCRIPTION
-        Grants an AzureRM role assignment to an existing AzureAD principal. You must wait at least 2 minutes before using the role assignment: https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#known-limits-and-performance
+        Grants an AzureRM role assignment to an existing Entra principal. You must wait at least 2 minutes before using the role assignment: https://docs.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#known-limits-and-performance
 
     .PARAMETER PrincipalId
-        The object ID of the existing AAD principal to which you are granting the AzureRM role
+        The object ID of the existing Entra principal to which you are granting the AzureRM role
 
     .PARAMETER AzureRMRoleID
-        The ID of the AzureRM Role you are granting to the AAD principal
+        The ID of the AzureRM Role you are granting to the Entra principal
 
     .PARAMETER TargetObjectID
         The ID of the AzureRM object you are scoping the role assignment against
@@ -6204,7 +6204,7 @@ function Invoke-AzureRMAbuseTests {
         Performs abuse tests against the appropriate AzureRM object type
 
     .PARAMETER GlobalAdminClientID
-        The ID of the service principal with Global Admin at the AzureAD tenant level
+        The ID of the service principal with Global Admin at the Entra tenant level
 
     .PARAMETER GlobalAdminSecret
         The plain-text password for the Global Admin service principal
@@ -6216,7 +6216,7 @@ function Invoke-AzureRMAbuseTests {
         The plain-text password for the User Access Admin service principal
 
     .PARAMETER TenantName
-        The display name of the AzureAD tenant the service principal lives in
+        The display name of the Entra tenant the service principal lives in
 
     .PARAMETER SubscriptionID
         The ID of the target subscription
@@ -6623,7 +6623,7 @@ Function Remove-AbuseTestAzureRMRoles {
 Function Remove-AbuseTestServicePrincipals {
     <#
     .SYNOPSIS
-        Remove all AzureAD Service Principals associated with a particular abuse test GUID
+        Remove all Entra Service Principals associated with a particular abuse test GUID
 
         Author: Andy Robbins (@_wald0)
         License: GPLv3
@@ -6636,7 +6636,7 @@ Function Remove-AbuseTestServicePrincipals {
         The unique identifier of the abuse tests 
 
     .PARAMETER MSGraphGlobalAdminToken
-        The JWT for an AzureAD Global Admin
+        The JWT for an Entra Global Admin
 
     .EXAMPLE
         C:\PS> Remove-AbuseTestAzureRMRoles `
@@ -6715,7 +6715,7 @@ Function New-TestAppReg {
         Required Dependencies: None
 
     .DESCRIPTION
-        Creates a new AzureAD Application Registration object with a provided test GUID as part of the app's display name
+        Creates a new Entra Application Registration object with a provided test GUID as part of the app's display name
 
     .PARAMETER TestGUID
         The unique identifier for your test, useful for later debugging purposes to differentiate tests from each other
@@ -6814,7 +6814,7 @@ Function New-TestSP {
         Required Dependencies: None
 
     .DESCRIPTION
-        Creates a new AzureAD Service Principal with a provided test GUID as part of the SP's display name
+        Creates a new Entra Service Principal with a provided test GUID as part of the SP's display name
 
     .PARAMETER TestGUID
         The unique identifier for your test, useful for later debugging purposes to differentiate tests from each other
@@ -6917,7 +6917,7 @@ Function Test-MGAddSelfAsOwnerOfApp {
         This is the SP that will try to add itself as the owner of another SP.
 
     .PARAMETER TargetAppId
-        The object ID of the AzureAD App you are trying to add an owner to.
+        The object ID of the Entra App you are trying to add an owner to.
 
     .PARAMETER TestToken
         The MS Graph-scoped JWT for the test service principal
@@ -7074,7 +7074,7 @@ Function Test-MGAddSelfAsOwnerOfSP {
         This is the SP that will try to add itself as the owner of another SP.
 
     .PARAMETER TargetSPId
-        The object ID of the AzureAD SP you are trying to add an owner to.
+        The object ID of the Entra SP you are trying to add an owner to.
 
     .PARAMETER TestToken
         The MS Graph-scoped JWT for the test service principal
@@ -7167,7 +7167,7 @@ Function Test-MGAddSelfAsOwnerOfSP {
 
     # If either the test token or GA token expire in the next 5 minutes, bail and report this to the user.
 
-    # Ensure the provided AAD role is activated.
+    # Ensure the provided Entra role is activated.
 
     # Check whether the test SP is already activated for the role. If so, remove the SP from that role and get a new test token for that SP
 
@@ -7196,7 +7196,7 @@ Function Test-MGAddSelfAsOwnerOfSP {
         AbuseTestDateTime       = $TimeOfTest
         AbuseTestToken          = $TestToken
     }
-    $AbuseTestResult.PSObject.TypeNames.Insert(0, 'BARK.AbuseTestResult.SelfAADAdminRoleAssignment')
+    $AbuseTestResult.PSObject.TypeNames.Insert(0, 'BARK.AbuseTestResult.SelfEntraAdminRoleAssignment')
 
     If ($Success) {
         $AbuseTestResult.AbuseTestOutcome = "Success"
@@ -7221,23 +7221,23 @@ Function Test-MGAddSelfAsOwnerOfSP {
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfSPDefinition' -Value (Get-Command -Name "Test-MGAddSelfAsOwnerOfSP") -Force
 New-Variable -Name 'Test-MGAddSelfAsOwnerOfSPAst' -Value (${Test-MGAddSelfAsOwnerOfSPDefinition}.ScriptBlock.Ast.Body) -Force
 
-Function Test-MGAddSelfToAADRole {
+Function Test-MGAddSelfToEntraRole {
     <#
     .SYNOPSIS
-        Tests whether a Service Principal can activate itself into an AAD Admin role
+        Tests whether a Service Principal can activate itself into an Entra Admin role
 
         Author: Andy Robbins (@_wald0)
         License: GPLv3
         Required Dependencies: None
 
     .DESCRIPTION
-        Test whether the supplied JWT has the privilege to activate the associated principal to the specified AzureAD admin role
+        Test whether the supplied JWT has the privilege to activate the associated principal to the specified Entra admin role
 
     .PARAMETER TestPrincipalID
         The ID of the service principal you are trying to activate the role for
 
     .PARAMETER RoleDefinitionId
-        The globally unique ID of the AzureAD admin role you are trying to activate
+        The globally unique ID of the Entra admin role you are trying to activate
 
     .PARAMETER TestToken
         The MS Graph-scoped JWT for the test service principal
@@ -7249,7 +7249,7 @@ Function Test-MGAddSelfToAADRole {
         The Get-Date formatted time the test was performed
 
     .EXAMPLE
-        C:\PS> Test-MGAddSelfToAADRole `
+        C:\PS> Test-MGAddSelfToEntraRole `
             -TestPrincipalId = "028362ca-90ae-41f2-ae9f-1a678cc17391" `
             -RoleDefinitionId "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken $TestToken
@@ -7330,7 +7330,7 @@ Function Test-MGAddSelfToAADRole {
     }
     $Success = $False
     Try {
-        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        $ActivateEntraRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
             -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" `
             -Method POST `
             -Body $($body | ConvertTo-Json) `
@@ -7348,13 +7348,13 @@ Function Test-MGAddSelfToAADRole {
         AbuseTestDateTime       = $TimeOfTest
         AbuseTestToken          = $TestToken
     }
-    $AbuseTestResult.PSObject.TypeNames.Insert(0, 'BARK.AbuseTestResult.SelfAADAdminRoleAssignment')
+    $AbuseTestResult.PSObject.TypeNames.Insert(0, 'BARK.AbuseTestResult.SelfEntraAdminRoleAssignment')
 
     If ($Success) {
         $AbuseTestResult.AbuseTestOutcome = "Success"
 
-        # Clean up the test by removing the SP from the AAD role
-        # Wait 1 minute for the AAD admin role activation to have propagated in Azure before deleting it
+        # Clean up the test by removing the SP from the Entra role
+        # Wait 1 minute for the Entra admin role activation to have propagated in Azure before deleting it
         Start-Sleep -s 60
         $body = @{
             "@odata.type" = "#microsoft.graph.unifiedRoleAssignment"
@@ -7372,8 +7372,8 @@ Function Test-MGAddSelfToAADRole {
     }
     $AbuseTestResult
 }
-New-Variable -Name 'Test-MGAddSelfToAADRoleDefinition' -Value (Get-Command -Name "Test-MGAddSelfToAADRole") -Force
-New-Variable -Name 'Test-MGAddSelfToAADRoleAst' -Value (${Test-MGAddSelfToAADRoleDefinition}.ScriptBlock.Ast.Body) -Force
+New-Variable -Name 'Test-MGAddSelfToEntraRoleDefinition' -Value (Get-Command -Name "Test-MGAddSelfToEntraRole") -Force
+New-Variable -Name 'Test-MGAddSelfToEntraRoleAst' -Value (${Test-MGAddSelfToEntraRoleDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function Test-MGAddRootCACert {
     <#
@@ -7605,7 +7605,7 @@ Function Test-MGAddSelfToMGAppRole {
 
     # If either the test token or GA token expire in the next 5 minutes, bail and report this to the user.
 
-    # Ensure the provided AAD role is activated.
+    # Ensure the provided Entra role is activated.
 
     # Check whether the test SP is already activated for the role. If so, remove the SP from that role and get a new test token for that SP
 
@@ -7642,8 +7642,8 @@ Function Test-MGAddSelfToMGAppRole {
     If ($Success -Or $HeldPrivilege -Match "RoleManagement.ReadWrite.Directory") {
         $AbuseTestResult.AbuseTestOutcome = "Success"
 
-        # Clean up the test by removing the SP from the AAD role
-        # Wait 1 minute for the AAD admin role activation to have propagated in Azure before deleting it
+        # Clean up the test by removing the SP from the Entra role
+        # Wait 1 minute for the Entra admin role activation to have propagated in Azure before deleting it
         #Start-Sleep -s 60
         #$body = @{
         #    "@odata.type" = "#microsoft.graph.unifiedRoleAssignment"
@@ -7770,7 +7770,7 @@ Function Test-MGAddOwnerToRoleEligibleGroup {
     }
     $Success = $False
     Try {
-        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        $ActivateEntraRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
             -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/owners/`$ref" `
             -Method         POST `
             -Body           $($body | ConvertTo-Json) `
@@ -7905,7 +7905,7 @@ Function Test-MGAddOwnerToNonRoleEligibleGroup {
     }
     $Success = $False
     Try {
-        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        $ActivateEntraRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
             -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/owners/`$ref" `
             -Method         POST `
             -Body           $($body | ConvertTo-Json) `
@@ -8040,7 +8040,7 @@ Function Test-MGAddMemberToRoleEligibleGroup {
     }
     $Success = $False
     Try {
-        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        $ActivateEntraRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
         -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/members/`$ref" `
         -Method         POST `
         -Body           $($body | ConvertTo-Json) `
@@ -8175,7 +8175,7 @@ Function Test-MGAddMemberToNonRoleEligibleGroup {
     }
     $Success = $False
     Try {
-        $ActivateAADRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
+        $ActivateEntraRoleTest = Invoke-RestMethod -Headers @{Authorization = "Bearer $($TestToken)" } `
         -Uri            "https://graph.microsoft.com/v1.0/groups/$($TargetGroupId)/members/`$ref" `
         -Method         POST `
         -Body           $($body | ConvertTo-Json) `
@@ -8566,7 +8566,7 @@ Function Invoke-AllAzureMGAbuseTests {
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRegSecret})                        { $ast = ${using:New-AppRegSecretAst};                      ${global:New-AppRegSecret} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
-        If (-Not ${global:Test-MGAddSelfToAADRole})                 { $ast = ${using:Test-MGAddSelfToAADRoleAst};               ${global:Test-MGAddSelfToAADRole} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfSP})               { $ast = ${using:Test-MGAddSelfAsOwnerOfSPAst};             ${global:Test-MGAddSelfAsOwnerOfSP} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfApp})              { $ast = ${using:Test-MGAddSelfAsOwnerOfAppAst};            ${global:Test-MGAddSelfAsOwnerOfApp} = $ast.GetScriptBlock() }
@@ -8736,7 +8736,7 @@ Function Invoke-AllAzureMGAbuseTests {
         $LocalTestResult = $using:MGTestResults
         $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+        $ThreadSafeTest = (& ${global:Test-MGAddSelfToEntraRole} `
             -TestPrincipalId $ThreadSafeSP.SPObjectId `
             -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken          $ThreadSafeTestToken.access_token `
@@ -8762,7 +8762,7 @@ Function Invoke-AllAzureMGAbuseTests {
     $MGTestResults
 }
 
-Function Invoke-AllAzureADAbuseTests {
+Function Invoke-AllEntraAbuseTests {
     <#
     .SYNOPSIS
         ...
@@ -8787,7 +8787,7 @@ Function Invoke-AllAzureADAbuseTests {
         The type of abuse test you want to run. Default behavior: run all tests
 
     .EXAMPLE
-        C:\PS> $Tests = Invoke-AllAzureADAbuseTests `
+        C:\PS> $Tests = Invoke-AllEntraAbuseTests `
             -GlobalAdminClientID "aab7d158-7037-45f1-9ed1-e9ec0222d927" `
             -GlobalAdminSecret "<secret>" `
             -TenantName "specterdev.onmicrosoft.com"
@@ -8845,17 +8845,17 @@ Function Invoke-AllAzureADAbuseTests {
     # Create thread-safe collections object to receive output
     $MGTestResults = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
 
-    # Using the Global Admin token, get the current list of available AzureAD admin role templates:
+    # Using the Global Admin token, get the current list of available Entra admin role templates:
     $URI        =   'https://graph.microsoft.com/v1.0/directoryRoleTemplates'
     $Request    =   $null
     $Request    =   Invoke-RestMethod `
                         -Headers @{Authorization = "Bearer $($GlobalAdminToken.access_token)"} `
                         -URI $URI `
                         -Method GET
-    $AzureADRoleTemplates = $Request.value
+    $EntraRoleTemplates = $Request.value
     
     # Using the Global Admin token, activate all the admin roles
-    $AzureADRoleTemplates | ForEach-Object {
+    $EntraRoleTemplates | ForEach-Object {
         $Role = $_
    
         $body = @{
@@ -8874,18 +8874,18 @@ Function Invoke-AllAzureADAbuseTests {
         }
     }
     
-    # Using my Global Admin token, get the active AzureAD roles
+    # Using my Global Admin token, get the active Entra roles
     $URI        =   'https://graph.microsoft.com/v1.0/directoryRoles'
     $Request    =   $null
     $Request    =   Invoke-RestMethod `
                         -Headers @{Authorization = "Bearer $($GlobalAdminToken.access_token)"} `
                         -URI $URI `
                         -Method GET
-    $AzureADRoles = $Request.value
+    $EntraRoles = $Request.value
 
     # Perform all abuse tests, creating a unique Service Principal per Azure AD admin role:
     #$MGRoles | ?{$_.AppRoleValue -Match "RoleManagement"} | ForEach-Object -ThrottleLimit 50 -Parallel {
-    $AzureADRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+    $EntraRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
 
         # Import and later call our functions in a thread-safe way
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
@@ -8893,7 +8893,7 @@ Function Invoke-AllAzureADAbuseTests {
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRegSecret})                        { $ast = ${using:New-AppRegSecretAst};                      ${global:New-AppRegSecret} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
-        If (-Not ${global:Test-MGAddSelfToAADRole})                 { $ast = ${using:Test-MGAddSelfToAADRoleAst};               ${global:Test-MGAddSelfToAADRole} = $ast.GetScriptBlock() }
+        If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfSP})               { $ast = ${using:Test-MGAddSelfAsOwnerOfSPAst};             ${global:Test-MGAddSelfAsOwnerOfSP} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfApp})              { $ast = ${using:Test-MGAddSelfAsOwnerOfAppAst};            ${global:Test-MGAddSelfAsOwnerOfApp} = $ast.GetScriptBlock() }
@@ -8936,7 +8936,7 @@ Function Invoke-AllAzureADAbuseTests {
         # Wait 1 minute for the secret to propagate before granting the MS Graph app role to the test app:
         Start-Sleep 60s
 
-        # Grant the AzureAD admin role to the test service principal
+        # Grant the Entra admin role to the test service principal
         $body = @{
             "@odata.id" =  "https://graph.microsoft.com/v1.0/directoryObjects/$($ThreadSafeSP.SPObjectId)"
         }
@@ -9084,8 +9084,8 @@ Function Invoke-AllAzureADAbuseTests {
                 $LocalTestResult.Add($ThreadSafeTest)
             }
 
-            MGAddSelfToAADRole {
-                $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+            MGAddSelfToEntraRole {
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToEntraRole} `
                     -TestPrincipalId    $ThreadSafeSP.SPObjectId `
                     -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
                     -TestToken          $ThreadSafeTestToken.access_token `
@@ -9208,7 +9208,7 @@ Function Invoke-AllAzureADAbuseTests {
                 $LocalTestResult = $using:MGTestResults
                 $LocalTestResult.Add($ThreadSafeTest)
 
-                $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+                $ThreadSafeTest = (& ${global:Test-MGAddSelfToEntraRole} `
                     -TestPrincipalId    $ThreadSafeSP.SPObjectId `
                     -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
                     -TestToken          $ThreadSafeTestToken.access_token `
@@ -9331,7 +9331,7 @@ Function Invoke-AllAzureADAbuseTests {
         $LocalTestResult = $using:MGTestResults
         $LocalTestResult.Add($ThreadSafeTest)
 
-        $ThreadSafeTest = (& ${global:Test-MGAddSelfToAADRole} `
+        $ThreadSafeTest = (& ${global:Test-MGAddSelfToEntraRole} `
             -TestPrincipalId    $ThreadSafeSP.SPObjectId `
             -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken          $ThreadSafeTestToken.access_token `
