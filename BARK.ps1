@@ -1553,8 +1553,8 @@ Function Get-EntraServicePrincipalOwner {
 
     $SPOwners
 }
-New-Variable -Name 'Get-ServicePrincipalOwnerDefinition' -Value (Get-Command -Name "Get-ServicePrincipalOwner") -Force
-New-Variable -Name 'Get-ServicePrincipalOwnerAst' -Value (${Get-ServicePrincipalOwnerDefinition}.ScriptBlock.Ast.Body) -Force
+New-Variable -Name 'Get-EntraServicePrincipalOwnerDefinition' -Value (Get-Command -Name "Get-EntraServicePrincipalOwner") -Force
+New-Variable -Name 'Get-EntraServicePrincipalOwnerAst' -Value (${Get-EntraServicePrincipalOwnerDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function Get-EntraAppOwner {
     <#
@@ -2095,8 +2095,8 @@ Function New-EntraAppSecret {
 
     $AppRegSecret
 }
-New-Variable -Name 'New-AppRegSecretDefinition' -Value (Get-Command -Name "New-AppRegSecret") -Force
-New-Variable -Name 'New-AppRegSecretAst' -Value (${New-AppRegSecretDefinition}.ScriptBlock.Ast.Body) -Force
+New-Variable -Name 'New-EntraAppSecretDefinition' -Value (Get-Command -Name "New-EntraAppSecret") -Force
+New-Variable -Name 'New-EntraAppSecretAst' -Value (${New-EntraAppSecretDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function New-EntraServicePrincipalSecret {
     <#
@@ -6342,7 +6342,7 @@ function Invoke-AzureRMAbuseTests {
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
         If (-Not ${global:New-TestAppReg})                                  { $ast = ${using:New-TestAppRegAst};                                ${global:New-TestAppReg} = $ast.GetScriptBlock() }
         If (-Not ${global:New-TestSP})                                      { $ast = ${using:New-TestSPAst};                                    ${global:New-TestSP} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-AppRegSecret})                                { $ast = ${using:New-AppRegSecretAst};                              ${global:New-AppRegSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                                { $ast = ${using:New-EntraAppSecretAst};                              ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AzureRMRoleAssignment})                       { $ast = ${using:New-AzureRMRoleAssignmentAst};                     ${global:New-AzureRMRoleAssignment} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-AzureRMAddSelfToAzureRMRole})                { $ast = ${using:Test-AzureRMAddSelfToAzureRMRoleAst};              ${global:Test-AzureRMAddSelfToAzureRMRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-AzureRMVMRunCommand})                        { $ast = ${using:Test-AzureRMVMRunCommandAst};                      ${global:Test-AzureRMVMRunCommand} = $ast.GetScriptBlock() }
@@ -6380,7 +6380,7 @@ function Invoke-AzureRMAbuseTests {
         Start-Sleep 60s
 
         # Create a secret for the test app reg:
-        $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
+        $ThreadSafeSecret = (& ${global:New-EntraAppSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
             -Token $ThreadSafeGlobalAdminToken.access_token
         )
@@ -8564,7 +8564,7 @@ Function Invoke-AllAzureMGAbuseTests {
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
         If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-AppRegSecret})                        { $ast = ${using:New-AppRegSecretAst};                      ${global:New-AppRegSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                        { $ast = ${using:New-EntraAppSecretAst};                      ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
@@ -8603,7 +8603,7 @@ Function Invoke-AllAzureMGAbuseTests {
         Start-Sleep 60s
 
         # Create a secret for the test app reg:
-        $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
+        $ThreadSafeSecret = (& ${global:New-EntraAppSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
             -Token $ThreadSafeGlobalAdminToken.access_token
         )
@@ -8891,7 +8891,7 @@ Function Invoke-AllEntraAbuseTests {
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
         If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-AppRegSecret})                        { $ast = ${using:New-AppRegSecretAst};                      ${global:New-AppRegSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                        { $ast = ${using:New-EntraAppSecretAst};                      ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
         If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
@@ -8929,7 +8929,7 @@ Function Invoke-AllEntraAbuseTests {
         Start-Sleep 60s
 
         # Create a secret for the test app reg:
-        $ThreadSafeSecret = (& ${global:New-AppRegSecret} `
+        $ThreadSafeSecret = (& ${global:New-EntraAppSecret} `
             -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
             -Token $ThreadSafeGlobalAdminToken.access_token
         )
