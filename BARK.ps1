@@ -3192,10 +3192,8 @@ Function Get-AllAzureRMKeyVaults {
             -ContentType "application/json"
         if ($Results.value) {
             $KeyVaultObjects += $Results.value
-        } else {
-            $KeyVaultObjects += $Results
         }
-        $uri = $Results.'@odata.nextlink'
+        $uri = $Results.nextlink
     } until (!($uri))
 
     $KeyVaultObjects
