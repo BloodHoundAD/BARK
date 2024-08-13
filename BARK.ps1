@@ -7477,7 +7477,6 @@ Function Test-MGAddRootCACert {
         $Success = $True
     }
     Catch {
-        $_
     }
 
     # Return an object of the test result:
@@ -8181,7 +8180,6 @@ Function Test-MGAddMemberToNonRoleEligibleGroup {
         $Success = $True
     }
     Catch {
-        $_
     }
 
     # Return an object of the test result:
@@ -8555,15 +8553,16 @@ Function Invoke-AllAzureMGAbuseTests {
     $MGRoles = Get-MGAppRoles -Token $GlobalAdminToken.access_token
 
     # Perform all abuse tests, creating a unique Service Principal per MS Graph app role:
-    #$MGRoles | ?{$_.AppRoleValue -Match "Group"} | ForEach-Object -ThrottleLimit 50 -Parallel {
     $MGRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+        $HeldPrivilege = $_.value
+        $AppRoleID = $_.id
 
         # Import and later call our functions in a thread-safe way
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
         If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-EntraAppSecret})                        { $ast = ${using:New-EntraAppSecretAst};                      ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                      { $ast = ${using:New-EntraAppSecretAst};                    ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppRoleAssignment})              { $ast = ${using:New-EntraAppRoleAssignmentAst};            ${global:New-EntraAppRoleAssignment} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfSP})               { $ast = ${using:Test-MGAddSelfAsOwnerOfSPAst};             ${global:Test-MGAddSelfAsOwnerOfSP} = $ast.GetScriptBlock() }
@@ -8609,9 +8608,9 @@ Function Invoke-AllAzureMGAbuseTests {
         Start-Sleep 60s
 
         # Grant the MS Graph App Role to the SP
-        $MSGraphAppRoleActivation = (& ${global:New-AppRoleAssignment} `
+        $MSGraphAppRoleActivation = (& ${global:New-EntraAppRoleAssignment} `
             -SPObjectID $ThreadSafeSP.SPObjectId `
-            -AppRoleID $_.AppRoleID `
+            -AppRoleID $AppRoleID `
             -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" `
             -Token $ThreadSafeGlobalAdminToken.access_token
         )
@@ -8623,7 +8622,7 @@ Function Invoke-AllAzureMGAbuseTests {
         $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
             -ClientID       $ThreadSafeSecret.AppRegAppId `
             -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "specterdev.onmicrosoft.com"
+            -TenantName     ${using:TenantName}
         )
 
         $ThreadSafeTest = (& ${global:Test-MGAddOwnerToRoleEligibleGroup} `
@@ -8631,7 +8630,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8643,7 +8642,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8655,7 +8654,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8667,7 +8666,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8679,7 +8678,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8691,7 +8690,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8703,7 +8702,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetAppId        "57cf2904-6741-484d-a781-2ecbb13ace62" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8715,7 +8714,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -TargetSPId         "0e0d0975-59cb-4065-9b11-e5c960617a46" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8727,7 +8726,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
             -TestToken              $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege          $_.AppRoleValue `
+            -HeldPrivilege          $HeldPrivilege `
             -TestGUID               ${using:TestGUID} `
             -TimeOfTest             $(Get-Date)
         )
@@ -8739,7 +8738,7 @@ Function Invoke-AllAzureMGAbuseTests {
             -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8749,7 +8748,7 @@ Function Invoke-AllAzureMGAbuseTests {
         $ThreadSafeTest = (& ${global:Test-MGAddRootCACert} `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.AppRoleValue `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -8884,13 +8883,14 @@ Function Invoke-AllEntraAbuseTests {
     # Perform all abuse tests, creating a unique Service Principal per Azure AD admin role:
     #$MGRoles | ?{$_.AppRoleValue -Match "RoleManagement"} | ForEach-Object -ThrottleLimit 50 -Parallel {
     $EntraRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+        $HeldPrivilege = $_.displayName
 
         # Import and later call our functions in a thread-safe way
         # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
         If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
         If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-EntraAppSecret})                        { $ast = ${using:New-EntraAppSecretAst};                      ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
-        If (-Not ${global:New-AppRoleAssignment})                   { $ast = ${using:New-AppRoleAssignmentAst};                 ${global:New-AppRoleAssignment} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                      { $ast = ${using:New-EntraAppSecretAst};                    ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppRoleAssignment})              { $ast = ${using:New-EntraAppRoleAssignmentAst};            ${global:New-EntraAppRoleAssignment} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToEntraRole})               { $ast = ${using:Test-MGAddSelfToEntraRoleAst};             ${global:Test-MGAddSelfToEntraRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfToMGAppRole})               { $ast = ${using:Test-MGAddSelfToMGAppRoleAst};             ${global:Test-MGAddSelfToMGAppRole} = $ast.GetScriptBlock() }
         If (-Not ${global:Test-MGAddSelfAsOwnerOfSP})               { $ast = ${using:Test-MGAddSelfAsOwnerOfSPAst};             ${global:Test-MGAddSelfAsOwnerOfSP} = $ast.GetScriptBlock() }
@@ -8951,7 +8951,7 @@ Function Invoke-AllEntraAbuseTests {
         $ThreadSafeTestToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
             -ClientID       $ThreadSafeSecret.AppRegAppId `
             -ClientSecret   $ThreadSafeSecret.AppRegSecretValue `
-            -TenantName     "specterdev.onmicrosoft.com"
+            -TenantName     ${using:TenantName}
         )
 
         Switch (${using:AbuseTestType}) {
@@ -8962,7 +8962,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -8976,7 +8976,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetSPId         $ThreadSafeSP.SPObjectId `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -8990,7 +8990,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9004,7 +9004,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9018,7 +9018,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9032,7 +9032,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9046,7 +9046,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9060,7 +9060,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9074,7 +9074,7 @@ Function Invoke-AllEntraAbuseTests {
                     -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
                     -TestToken              $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege          $_.displayName `
+                    -HeldPrivilege          $HeldPrivilege `
                     -TestGUID               ${using:TestGUID} `
                     -TimeOfTest             $(Get-Date)
                 )
@@ -9088,7 +9088,7 @@ Function Invoke-AllEntraAbuseTests {
                     -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9103,7 +9103,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9115,7 +9115,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetSPId         $ThreadSafeSP.SPObjectId `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9127,7 +9127,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9139,7 +9139,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9151,7 +9151,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9163,7 +9163,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9175,7 +9175,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9187,7 +9187,7 @@ Function Invoke-AllEntraAbuseTests {
                     -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9199,7 +9199,7 @@ Function Invoke-AllEntraAbuseTests {
                     -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
                     -TestToken              $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege          $_.displayName `
+                    -HeldPrivilege          $HeldPrivilege `
                     -TestGUID               ${using:TestGUID} `
                     -TimeOfTest             $(Get-Date)
                 )
@@ -9211,7 +9211,7 @@ Function Invoke-AllEntraAbuseTests {
                     -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
                     -TestToken          $ThreadSafeTestToken.access_token `
                     -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-                    -HeldPrivilege      $_.displayName `
+                    -HeldPrivilege      $HeldPrivilege `
                     -TestGUID           ${using:TestGUID} `
                     -TimeOfTest         $(Get-Date)
                 )
@@ -9226,7 +9226,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9238,7 +9238,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetSPId         $ThreadSafeSP.SPObjectId `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9250,7 +9250,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9262,7 +9262,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetGroupId      "59595334-99d7-4e83-93b3-0054859b3d50" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9274,7 +9274,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetAppId        "1aff018f-8fc0-48ac-a5bc-22dbc179150b" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9286,7 +9286,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9298,7 +9298,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetGroupId      "abafdcb5-edb4-46f0-9c81-7af56e487a37" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9310,7 +9310,7 @@ Function Invoke-AllEntraAbuseTests {
             -TargetSPId         "09b51dd2-c780-4492-994a-1cbce1d66719" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
@@ -9322,7 +9322,7 @@ Function Invoke-AllEntraAbuseTests {
             -MGAppRoleDefinitionId  "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8" `
             -TestToken              $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken     $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege          $_.displayName `
+            -HeldPrivilege          $HeldPrivilege `
             -TestGUID               ${using:TestGUID} `
             -TimeOfTest             $(Get-Date)
         )
@@ -9334,7 +9334,7 @@ Function Invoke-AllEntraAbuseTests {
             -RoleDefinitionId   "62e90394-69f5-4237-9190-012177145e10" `
             -TestToken          $ThreadSafeTestToken.access_token `
             -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token `
-            -HeldPrivilege      $_.displayName `
+            -HeldPrivilege      $HeldPrivilege `
             -TestGUID           ${using:TestGUID} `
             -TimeOfTest         $(Get-Date)
         )
