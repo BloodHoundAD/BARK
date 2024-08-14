@@ -1609,7 +1609,7 @@ Function Get-EntraAppOwner {
         
     )
 
-    $URI = "https://graph.microsoft.com/v1.0/servicePrincipals/$($AppObjectID)/owners"
+    $URI = "https://graph.microsoft.com/v1.0/applications/$($AppObjectID)/owners"
     $Results = $null
     $AppOwners = $null
     do {
