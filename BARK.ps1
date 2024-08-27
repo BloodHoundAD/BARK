@@ -949,6 +949,56 @@ New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordAst' -Value (${Get
 ## Entra Enumeration Functions ##
 ## ########################### ##
 
+Function Get-AllEntraRoles {
+    <#
+    .SYNOPSIS
+        Retrieves all active Entra ID admin roles
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Retrieves all active Entra ID admin roles
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the principal with the ability to read Entra admin roles
+
+    .EXAMPLE
+        C:\PS> $EntraAdminRoles = Get-AllEntraRoles `
+            -Token $Token
+
+        Description
+        -----------
+        Uses the token from $Token to list the active Entra admin roles
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/directoryrole-list?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    # Using the provided token, get the active Entra ID roles
+    $URI        =   'https://graph.microsoft.com/v1.0/directoryRoles'
+    $Request    =   Invoke-RestMethod `
+                        -Headers @{Authorization = "Bearer $($Token)"} `
+                        -URI $URI `
+                        -Method GET
+    $EntraIDRoles = $Request.value
+
+    $EntraIDRoles
+
+}
+New-Variable -Name 'Get-AllEntraRolesDefinition' -Value (Get-Command -Name "Get-AllEntraRoles") -Force
+New-Variable -Name 'Get-AllEntraRolesAst' -Value (${Get-AllEntraRolesDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function Get-AllEntraApps {
     <#
     .SYNOPSIS
