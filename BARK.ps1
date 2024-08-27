@@ -1720,6 +1720,69 @@ New-Variable -Name 'Get-EntraGroupOwnerAst' -Value (${Get-EntraGroupOwnerDefinit
 ## Entra Object Manipulation Functions ##
 ## ################################### ##
 
+Function Enable-EntraRole {
+    <#
+    .SYNOPSIS
+        Enables (or "activates") the Entra role by its provided ID
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Enables (or "activates") the Entra role by its provided ID
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the principal with the ability to activate Entra admin roles
+
+    .EXAMPLE
+        C:\PS> $EntraRoleTemplates = Enable-EntraRoleTemplates `
+            -Token $Token
+
+        Description
+        -----------
+        Uses the token from $Token to list the available Entra admin role templates
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/directoryroletemplate-get?view=graph-rest-1.0&tabs=http
+        https://learn.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7.4#lifecycle-verbs
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $RoleID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    # Using the provided token, activate the Entra ID admin roles by its provided template ID
+    $body = @{
+        roleTemplateId = $RoleID
+    }
+    Try {
+        $ActivateRole = Invoke-RestMethod `
+            -Uri "https://graph.microsoft.com/v1.0/directoryRoles" `
+            -Headers @{Authorization = "Bearer $($Token)"} `
+            -Method POST `
+            -ContentType 'application/json' `
+            -Body $($body | ConvertTo-Json)
+    }
+    Catch {
+    }
+}
+New-Variable -Name 'Enable-EntraRoleDefinition' -Value (Get-Command -Name "Enable-EntraRole") -Force
+New-Variable -Name 'Enable-EntraRoleAst' -Value (${Enable-EntraRoleDefinition}.ScriptBlock.Ast.Body) -Force
+
 Function New-EntraRoleAssignment {
     <#
     .SYNOPSIS
