@@ -1387,30 +1387,31 @@ Function Get-EntraGroupMembers {
     $EntraGroupMembers
 }
 
-Function Get-EntraAdminRoleTemplates {
+Function Get-EntraRoleTemplates {
     <#
     .SYNOPSIS
-        Gets the list of Entra admin roles
+        Retrieves the available Entra ID admin role templates
 
         Author: Andy Robbins (@_wald0)
         License: GPLv3
         Required Dependencies: None
 
     .DESCRIPTION
-        Gets the list of Entra admin roles
+        Retrieves the available Entra ID admin role templates
 
     .PARAMETER Token
-        An MS-Graph scoped JWT for an Entra principal
+        The MS Graph-scoped JWT for the principal with the ability to list Entra admin role templates
 
     .EXAMPLE
-        PS C:\> $EntraRoles = Get-EntraAdminRoleTemplates -Token $MGToken
+        C:\PS> $EntraRoleTemplates = Get-EntraRoleTemplates `
+            -Token $Token
 
         Description
         -----------
-        Puts all Entra admin roles into the $EntraRoles variable
+        Uses the token from $Token to list the available Entra admin role templates
 
     .LINK
-        https://learn.microsoft.com/en-us/graph/api/directoryroletemplate-list?view=graph-rest-1.0&tabs=http
+        https://learn.microsoft.com/en-us/graph/api/directoryroletemplate-get?view=graph-rest-1.0&tabs=http
     #>
     [CmdletBinding()] Param (
         [Parameter(
@@ -1422,16 +1423,19 @@ Function Get-EntraAdminRoleTemplates {
         $Token
     )
 
-    $URI = 'https://graph.microsoft.com/v1.0/directoryRoleTemplates'
-    $Request = $null
-    $Request = Invoke-RestMethod `
-        -Headers @{Authorization = "Bearer $($Token)"} `
-        -URI $URI `
-        -Method GET
-    $EntraRoleTemplates = $Request.value
+    # Using the provided token, get the current list of available Entra ID admin role templates:
+    $URI        =   'https://graph.microsoft.com/v1.0/directoryRoleTemplates'
+    $Request    =   Invoke-RestMethod `
+                        -Headers @{Authorization = "Bearer $($Token)"} `
+                        -URI $URI `
+                        -Method GET
+    $EntraIDRoleTemplates = $Request.value
 
-    $EntraRoleTemplates
+    $EntraIDRoleTemplates
+
 }
+New-Variable -Name 'Get-EntraRoleTemplatesDefinition' -Value (Get-Command -Name "Get-EntraRoleTemplates") -Force
+New-Variable -Name 'Get-EntraRoleTemplatesAst' -Value (${Get-EntraRoleTemplatesDefinition}.ScriptBlock.Ast.Body) -Force
 
 Function Get-MGAppRoles {
     <#
