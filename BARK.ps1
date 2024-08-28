@@ -5496,6 +5496,645 @@ Function Invoke-AzureVMScaleSetVMRunCommand {
 ## BARK Meta Functions ##
 ## ################### ##
 
+Function New-EntraIDAbuseTestSPs {
+    <#
+    .SYNOPSIS
+        Creates one service prinicipal per active Entra ID admin role and grants each
+        service principal the appropriate role. Returns plain text credentials created
+        for each service prinicpal.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies:
+            Get-AllEntraRoles
+            Get-MSGraphTokenWithClientCredentials
+            New-TestAppReg
+            New-TestSP
+            New-EntraAppSecret
+
+    .DESCRIPTION
+        Creates one service prinicipal per active Entra ID admin role and grants each
+        service principal the appropriate role. Returns plain text credentials created
+        for each service prinicpal.
+
+    .PARAMETER GlobalAdminClientID
+        The client ID of a service principal with Global Admin rights.
+
+    .PARAMETER GlobalAdminSecret
+        The secret of the service principal with Global Admin rights.
+
+    .PARAMETER TenantName
+        The FQDN of the Entra tenant.
+
+    .EXAMPLE
+        C:\PS> $EntraIDRoleAbuseTestServicePrincipalCredentials = New-EntraIDAbuseTestSPs `
+            -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+            -GlobalAdminSecret "<secret>" `
+            -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Creates one service principal per Entra admin role, activates the relevant role assignment
+        for each service principal, creates a secret for each service principal. Stores the service principal
+        client ID, secret, role ID, role name, and role templates ID into the
+        $EntraIDRoleAbuseTestServicePrincipalCredentials variable.
+
+    .EXAMPLE
+        C:\PS>  $EntraRoleTemplates = Get-EntraRoleTemplates `
+                    -Token $Token
+
+        C:\PS>  $EntraRoleTemplates | %{
+                    Enable-EntraRole `
+                        -RoleID $_.id `
+                        -Token $Token
+                }
+
+        C:\PS>  $EntraIDRoleAbuseTestServicePrincipalCredentials = New-EntraIDAbuseTestSPs `
+                    -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+                    -GlobalAdminSecret "<secret>" `
+                    -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Activate all Entra ID admin roles, and then create one SP per Entra role.
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminClientID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminSecret,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TenantName
+    )
+
+    $GlobalAdminToken = Get-MSGraphTokenWithClientCredentials `
+        -ClientID       $GlobalAdminClientID `
+        -ClientSecret   $GlobalAdminSecret `
+        -TenantName     $TenantName
+
+    # Create a unique identifier for this collection of service principals.
+    $TestGUID = ([GUID]::NewGuid()).toString().split('-')[0]
+
+    # Create thread-safe collections object to receive output
+    $SPCreds = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
+    
+    # Using the Global Admin token, get the active Entra ID roles
+    $EntraIDRoles = Get-AllEntraRoles -Token $GlobalAdminToken.access_token
+
+    # Create one service principal per Entra ID admin role:
+    $EntraIDRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+
+        # Import and later call our functions in a thread-safe way
+        # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
+        If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                      { $ast = ${using:New-EntraAppSecretAst};                    ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+
+        $ThreadSafeGlobalAdminToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
+            -ClientID ${using:GlobalAdminClientID} `
+            -ClientSecret ${using:GlobalAdminSecret} `
+            -TenantName ${using:TenantName})
+
+        $ThreadAppRegDisplayName = $(${using:TestGUID} + "-" + $_.displayName)
+
+        # Create the test app reg:
+        $ThreadSafeAppReg = (& ${global:New-TestAppReg} `
+            -DisplayName $ThreadAppRegDisplayName `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the app reg to propagate before creating the SP for the app reg
+        Start-Sleep 60s
+
+        # Create the test SP:
+        $ThreadSafeSP = (& ${global:New-TestSP} `
+            -AppId $ThreadSafeAppReg.AppRegAppId `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the SP to propagate before creating a secret for the app reg.
+        Start-Sleep 60s
+
+        # Create a secret for the test app reg:
+        $ThreadSafeSecret = (& ${global:New-EntraAppSecret} `
+            -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
+            -Token $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the secret to propagate before granting the Entra ID admin role to the test app:
+        Start-Sleep 60s
+
+        # Grant the Entra ID admin role to the test service principal
+        $body = @{
+            "@odata.id" =  "https://graph.microsoft.com/v1.0/directoryObjects/$($ThreadSafeSP.SPObjectId)"
+        }
+        $GrantRole = Invoke-RestMethod -Headers @{Authorization = "Bearer $($ThreadSafeGlobalAdminToken.access_token)" } `
+            -Uri "https://graph.microsoft.com/v1.0/directoryRoles/$($_.id)/members/`$ref" `
+            -Method POST `
+            -Body $($body | ConvertTo-Json) `
+            -ContentType 'application/json'
+
+        $SPCred = New-Object PSObject
+        $SPCred | Add-Member Noteproperty 'ClientID' $ThreadSafeSecret.AppRegAppId
+        $SPCred | Add-Member Noteproperty 'ClientSecret' $ThreadSafeSecret.AppRegSecretValue
+        $SPCred | Add-Member Noteproperty 'RoleName' $_.displayName
+        $SPCred | Add-Member Noteproperty 'RoleTemplateID' $_.roleTemplateId
+        $SPCred | Add-Member Noteproperty 'RoleID' $_.id
+
+        $LocalSPCreds = $using:SPCreds
+        $LocalSPCreds.Add($SPCred)
+
+    }
+
+    $SPCreds
+
+}
+
+Function New-EntraIDAbuseTestUsers {
+    <#
+    .SYNOPSIS
+        Creates one user per active Entra ID admin role and grants each
+        user the appropriate role. Returns plain text credentials created
+        for each user.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies:
+            Get-AllEntraRoles
+            Get-MSGraphTokenWithClientCredentials
+
+    .DESCRIPTION
+        Creates one user per active Entra ID admin role and grants each
+        uyser the appropriate role. Returns plain text credentials created
+        for each user.
+
+    .PARAMETER GlobalAdminClientID
+        The client ID of a service principal with Global Admin rights.
+
+    .PARAMETER GlobalAdminSecret
+        The secret of the service principal with Global Admin rights.
+
+    .PARAMETER TenantName
+        The FQDN of the Entra tenant.
+
+    .EXAMPLE
+        C:\PS> $EntraIDRoleAbuseTestUserCredentials = New-EntraIDAbuseTestUsers `
+            -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+            -GlobalAdminSecret "<secret>" `
+            -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Creates one user per Entra admin role, activates the relevant role assignment
+        for each user. Stores the user's UPN, password, role ID, role name, and role templates ID into the $EntraIDRoleAbuseTestUserCredentials
+        variable.
+
+    .EXAMPLE
+        C:\PS>  $EntraRoleTemplates = Get-EntraRoleTemplates `
+                    -Token $Token
+
+        C:\PS>  $EntraRoleTemplates | %{
+                    Enable-EntraRole `
+                        -RoleID $_.id `
+                        -Token $Token
+                }
+
+        C:\PS>  $EntraIDRoleAbuseTestUserCredentials = New-EntraIDAbuseTestUsers `
+                    -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+                    -GlobalAdminSecret "<secret>" `
+                    -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Activate all Entra ID admin roles, and then create one user per Entra role.
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminClientID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminSecret,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TenantName
+    )
+
+    $GlobalAdminToken = Get-MSGraphTokenWithClientCredentials `
+        -ClientID       $GlobalAdminClientID `
+        -ClientSecret   $GlobalAdminSecret `
+        -TenantName     $TenantName
+
+    # Create a unique identifier for this collection of users.
+    $TestGUID = ([GUID]::NewGuid()).toString().split('-')[0]
+
+    # Create thread-safe collections object to receive output
+    $UserCreds = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
+    
+    # Using the Global Admin token, get the active Entra ID roles
+    $EntraIDRoles = Get-AllEntraRoles `
+        -Token $GlobalAdminToken.access_token
+
+    # Create one user per Entra ID admin role:
+    $EntraIDRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+
+        $RoleDefinitionID = $_.roleTemplateId
+
+        # Import and later call our functions in a thread-safe way
+        # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+
+        $ThreadSafeGlobalAdminToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
+            -ClientID ${using:GlobalAdminClientID} `
+            -ClientSecret ${using:GlobalAdminSecret} `
+            -TenantName ${using:TenantName})
+
+        $UserDisplayName = $(${using:TestGUID} + "-" + $_.displayName.replace(' ',''))
+        $UserPassword = (New-GUID).GUID.tostring()
+        $UserPrincipalName = "$($UserDisplayName)@$(${using:TenantName})"
+
+        # Create the test user
+        $Body = @{
+            accountEnabled = "true"
+            displayName = $UserDisplayName
+            passwordProfile = @{
+                forceChangePasswordNextSignIn = "false"
+                password = $UserPassword
+            }
+            mailNickname = $UserDisplayName
+            userPrincipalName = $UserPrincipalName
+        }
+        $CreateUserRequest = Invoke-RestMethod `
+            -Headers        @{Authorization = "Bearer $($ThreadSafeGlobalAdminToken.access_token)" } `
+            -URI            "https://graph.microsoft.com/v1.0/users/" `
+            -Method         POST `
+            -Body           $($Body | ConvertTo-JSON) `
+            -ContentType    'application/json'
+
+        Start-Sleep 60s
+
+        $body = @{
+            "@odata.type" = "#microsoft.graph.unifiedRoleAssignment"
+            principalId = $CreateUserRequest.id
+            roleDefinitionId = $RoleDefinitionID
+            directoryScopeId = "/"
+        }
+
+        $GrantRoleRequest = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($ThreadSafeGlobalAdminToken.access_token)"
+            } `
+            -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" `
+            -Method POST `
+            -Body $($body | ConvertTo-Json) `
+            -ContentType 'application/json'
+
+        $UserCred = New-Object PSObject
+        $UserCred | Add-Member Noteproperty 'Username' $UserPrincipalName
+        $UserCred | Add-Member Noteproperty 'UserPassword' $UserPassword
+        $UserCred | Add-Member Noteproperty 'RoleName' $_.displayName
+        $UserCred | Add-Member Noteproperty 'RoleTemplateID' $_.roleTemplateId
+        $UserCred | Add-Member Noteproperty 'RoleID' $_.id
+
+        $LocalUserCreds = $using:UserCreds
+        $LocalUserCreds.Add($UserCred)
+
+    }
+
+    $UserCreds
+
+}
+
+Function New-IntuneAbuseTestUsers {
+    <#
+    .SYNOPSIS
+        Creates one user per Intune role and grants each user the appropriate
+        role. Returns plain text credentials created for each user.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies:
+            Get-IntuneRoleDefinitions
+            Get-MSGraphTokenWithClientCredentials
+
+    .DESCRIPTION
+        Creates one user per Intune role and grants each user the appropriate
+        role. Returns plain text credentials created for each user.
+
+    .PARAMETER GlobalAdminClientID
+        The client ID of a service principal with Global Admin rights.
+
+    .PARAMETER GlobalAdminSecret
+        The secret of the service principal with Global Admin rights.
+
+    .PARAMETER TenantName
+        The FQDN of the Entra tenant.
+
+    .EXAMPLE
+        C:\PS> $IntuneRoleAbuseTestUserCredentials = New-IntuneAbuseTestUsers `
+            -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+            -GlobalAdminSecret "<secret>" `
+            -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Creates one user per Intune role, activates the relevant role assignment
+        for each user. Stores the user's UPN, password, role ID, role name, and role
+        template ID into the $IntuneRoleAbuseTestUserCredentials variable.
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminClientID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminSecret,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TenantName
+    )
+
+    $GlobalAdminToken = Get-MSGraphTokenWithClientCredentials `
+        -ClientID       $GlobalAdminClientID `
+        -ClientSecret   $GlobalAdminSecret `
+        -TenantName     $TenantName
+
+    # Create a unique identifier for this collection of users.
+    $TestGUID = ([GUID]::NewGuid()).toString().split('-')[0]
+
+    # Create thread-safe collections object to receive output
+    $UserCreds = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
+    
+    # Get the Intune role definitions
+    $IntuneRoleDefinitions = Get-IntuneRoleDefinitions `
+        -Token $GlobalAdminToken.access_token
+
+    # Create one user per Intune role:
+    $IntuneRoleDefinitions | ForEach-Object -ThrottleLimit 50 -Parallel {
+
+        $RoleDefinitionID = $_.id
+
+        # Import and later call our functions in a thread-safe way
+        # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+
+        $ThreadSafeGlobalAdminToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
+            -ClientID ${using:GlobalAdminClientID} `
+            -ClientSecret ${using:GlobalAdminSecret} `
+            -TenantName ${using:TenantName})
+
+        $UserDisplayName = $(${using:TestGUID} + "-" + $_.displayName.replace(' ',''))
+        $UserPassword = (New-GUID).GUID.tostring()
+        $UserPrincipalName = "$($UserDisplayName)@$(${using:TenantName})"
+
+        # Create the test user
+        $Body = @{
+            accountEnabled = "true"
+            displayName = $UserDisplayName
+            passwordProfile = @{
+                forceChangePasswordNextSignIn = "false"
+                password = $UserPassword
+            }
+            mailNickname = $UserDisplayName
+            userPrincipalName = $UserPrincipalName
+        }
+        $CreateUserRequest = Invoke-RestMethod `
+            -Headers        @{Authorization = "Bearer $($ThreadSafeGlobalAdminToken.access_token)" } `
+            -URI            "https://graph.microsoft.com/v1.0/users/" `
+            -Method         POST `
+            -Body           $($Body | ConvertTo-JSON) `
+            -ContentType    'application/json'
+
+        Start-Sleep 60s
+
+        $Body = @{
+            id = ""
+            description = ""
+            displayName = ([GUID]::NewGuid()).toString().split('-')[0]
+            members = @(
+                "$($CreateUserRequest.id)"
+            )
+            resourceScopes = @()
+            "roleDefinition@odata.bind" = "https://graph.microsoft.com/beta/deviceManagement/roleDefinitions('$($RoleDefinitionID)')"
+            scopeType = "allDevicesAndLicensedUsers"
+        }
+        $Request = Invoke-WebRequest -UseBasicParsing -Uri "https://graph.microsoft.com/beta/deviceManagement/roleAssignments" `
+        -Method "POST" `
+        -Headers @{
+          "Authorization"="Bearer $($ThreadSafeGlobalAdminToken.access_token)"
+        } `
+        -ContentType "application/json" `
+        -Body $($Body | ConvertTo-JSON -Depth 4)
+
+        $UserCred = New-Object PSObject
+        $UserCred | Add-Member Noteproperty 'Username' $UserPrincipalName
+        $UserCred | Add-Member Noteproperty 'UserPassword' $UserPassword
+        $UserCred | Add-Member Noteproperty 'RoleName' $_.displayName
+        $UserCred | Add-Member Noteproperty 'RoleID' $_.id
+
+        $LocalUserCreds = $using:UserCreds
+        $LocalUserCreds.Add($UserCred)
+
+    }
+
+    $UserCreds
+
+}
+
+Function New-MSGraphAppRoleTestSPs {
+    <#
+    .SYNOPSIS
+        Creates one service prinicipal per MS Graph app role and grants each
+        service principal the appropriate role. Returns plain text secret created
+        for each service prinicpal.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies:
+            Get-MGAppRoles
+            Get-MSGraphTokenWithClientCredentials
+            New-TestAppReg
+            New-TestSP
+            New-EntraAppSecret
+
+    .DESCRIPTION
+        Creates one service prinicipal per MS Graph app role and grants each
+        service principal the appropriate role. Returns plain text secret created
+        for each service prinicpal.
+
+    .PARAMETER GlobalAdminClientID
+        The client ID of a service principal with Global Admin rights.
+
+    .PARAMETER GlobalAdminSecret
+        The secret of the service principal with Global Admin rights.
+
+    .PARAMETER TenantName
+        The FQDN of the Entra tenant.
+
+    .EXAMPLE
+        C:\PS> $MSGraphAppRoleAbuseTestServicePrincipalCredentials = New-MSGraphAppRoleTestSPs `
+            -GlobalAdminClientID "b693989d-453f-41af-978b-4b0706a599a5" `
+            -GlobalAdminSecret "<secret>" `
+            -TenantName "contoso.onmicrosoft.com"
+
+        Description
+        -----------
+        Creates one service principal per MS Graph app role, activates the relevant role assignment
+        for each service principal, creates a secret for each service principal. Stores the service principal
+        client ID, secret, role ID, role name, and role templates ID into the
+        $MSGraphAppRoleAbuseTestServicePrincipalCredentials variable.
+
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminClientID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $GlobalAdminSecret,
+        
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $TenantName
+        
+    )
+
+    $GlobalAdminToken = Get-MSGraphTokenWithClientCredentials `
+        -ClientID       $GlobalAdminClientID `
+        -ClientSecret   $GlobalAdminSecret `
+        -TenantName     $TenantName
+
+    # Create a unique identifier for this test. Abuse test Service Principal display names will start with this string.
+    $TestGUID = ([GUID]::NewGuid()).toString().split('-')[0]
+
+    # Create thread-safe collections object to receive output
+    $SPCreds = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::New()
+
+    # Get all current app roles that can be scoped against MS Graph:
+    $MGRoles = Get-MGAppRoles -Token $GlobalAdminToken.access_token
+
+    # Perform all abuse tests, creating a unique Service Principal per MS Graph app role:
+    $MGRoles | ForEach-Object -ThrottleLimit 50 -Parallel {
+
+        # Import and later call our functions in a thread-safe way
+        # https://github.com/PowerShell/PowerShell/issues/16461#issuecomment-967759037
+        If (-Not ${global:New-TestAppReg})                          { $ast = ${using:New-TestAppRegAst};                        ${global:New-TestAppReg} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-TestSP})                              { $ast = ${using:New-TestSPAst};                            ${global:New-TestSP} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppSecret})                      { $ast = ${using:New-EntraAppSecretAst};                    ${global:New-EntraAppSecret} = $ast.GetScriptBlock() }
+        If (-Not ${global:New-EntraAppRoleAssignment})              { $ast = ${using:New-EntraAppRoleAssignmentAst};            ${global:New-EntraAppRoleAssignment} = $ast.GetScriptBlock() }
+        If (-Not ${global:Get-MSGraphTokenWithClientCredentials})   { $ast = ${using:Get-MSGraphTokenWithClientCredentialsAst}; ${global:Get-MSGraphTokenWithClientCredentials} = $ast.GetScriptBlock() }
+
+        $ThreadSafeGlobalAdminToken = (& ${global:Get-MSGraphTokenWithClientCredentials} `
+            -ClientID ${using:GlobalAdminClientID} `
+            -ClientSecret ${using:GlobalAdminSecret} `
+            -TenantName ${using:TenantName})
+
+        $ThreadAppRegDisplayName = $(${using:TestGUID} + "-" + $_.AppRoleValue)
+
+        # Create the test app reg:
+        $ThreadSafeAppReg = (& ${global:New-TestAppReg} `
+            -DisplayName $ThreadAppRegDisplayName `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the app reg to propagate before creating the SP for the app reg
+        Start-Sleep 60s
+
+        # Create the test SP:
+        $ThreadSafeSP = (& ${global:New-TestSP} `
+            -AppId $ThreadSafeAppReg.AppRegAppId `
+            -GlobalAdminMGToken $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the SP to propagate before creating a secret for the app reg.
+        Start-Sleep 60s
+
+        # Create a secret for the test app reg:
+        $ThreadSafeSecret = (& ${global:New-EntraAppSecret} `
+            -AppRegObjectID $ThreadSafeAppReg.AppRegObjectID `
+            -Token $ThreadSafeGlobalAdminToken.access_token
+        )
+        # Wait 1 minute for the secret to propagate before granting the MS Graph app role to the test app:
+        Start-Sleep 60s
+
+        # Grant the MS Graph App Role to the SP
+        $MSGraphAppRoleActivation = (& ${global:New-EntraAppRoleAssignment} `
+            -SPObjectID $ThreadSafeSP.SPObjectId `
+            -AppRoleID $_.id `
+            -ResourceID "9858020a-4c00-4399-9ae4-e7897a8333fa" `
+            -Token $ThreadSafeGlobalAdminToken.access_token
+        )
+
+        $SPCred = New-Object PSObject
+        $SPCred | Add-Member Noteproperty 'ClientID' $ThreadSafeSecret.AppRegAppId
+        $SPCred | Add-Member Noteproperty 'ClientSecret' $ThreadSafeSecret.AppRegSecretValue
+        $SPCred | Add-Member Noteproperty 'HeldPrivilege' $_.value
+
+        $LocalSPCreds = $using:SPCreds
+        $LocalSPCreds.Add($SPCred)
+
+    }
+
+    $SPCreds
+
+}
+
 Function Get-EntraTierZeroServicePrincipals {
     <#
     .SYNOPSIS
