@@ -945,9 +945,9 @@ Function Get-AzureKeyVaultTokenWithUsernamePassword {
 New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-AzureKeyVaultTokenWithUsernamePassword") -Force
 New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordAst' -Value (${Get-AzureKeyVaultTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
 
-#################################
-# Intune Enumeration functions #
-#################################
+##################################
+## Intune Enumeration functions ##
+##################################
 
 Function Get-IntuneRoleDefinitions {
     <#
@@ -1072,6 +1072,71 @@ Function Get-IntuneManagedDevices {
 ## ########################### ##
 ## Entra Enumeration Functions ##
 ## ########################### ##
+
+Function Get-EntraDeviceRegisteredUsers {
+    <#
+    .SYNOPSIS
+        Get the JSON-formatted user(s) of a specified Entra device using the MS Graph API
+    
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+    
+    .DESCRIPTION
+        Get the JSON-formatted user(s) of a specified Entra device using the MS Graph API
+    
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the princpal with read access to Entra device users
+    
+    .EXAMPLE
+    C:\PS> $EntraDeviceRegisteredUsers = Get-EntraDeviceRegisteredUsers `
+               -Token $Token -DeviceID "25d185cb-cadd-45be-a048-e1424dd9e32b"
+    
+    Description
+    -----------
+    Uses the JWT in the $Token variable to list the user(s) of the Entra device with ID of
+    "25d185cb-cadd-45be-a048-e1424dd9e32b" and put it into the $EntraDeviceUsers variable
+    
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/device-list-registeredusers?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $DeviceID = $False
+    )
+
+    # Get the device user(s)
+    $URI = "https://graph.microsoft.com/beta/devices/$($DeviceID)/registeredUsers"
+    $Results = $null
+    $DeviceUsers = $null
+    $Results = Invoke-RestMethod `
+        -Headers @{
+            Authorization = "Bearer $($Token)"
+            ConsistencyLevel = "eventual"
+        } `
+        -URI $URI `
+        -UseBasicParsing `
+        -Method "GET" `
+        -ContentType "application/json"
+    if ($Results.value) {
+        $DeviceUsers += $Results.value
+    }
+
+    $DeviceUsers
+}
 
 Function Get-AllEntraRoles {
     <#
