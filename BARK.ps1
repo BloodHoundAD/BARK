@@ -945,6 +945,130 @@ Function Get-AzureKeyVaultTokenWithUsernamePassword {
 New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordDefinition' -Value (Get-Command -Name "Get-AzureKeyVaultTokenWithUsernamePassword") -Force
 New-Variable -Name 'Get-AzureKeyVaultTokenWithUsernamePasswordAst' -Value (${Get-AzureKeyVaultTokenWithUsernamePasswordDefinition}.ScriptBlock.Ast.Body) -Force
 
+#################################
+# Intune Enumeration functions #
+#################################
+
+Function Get-IntuneRoleDefinitions {
+    <#
+    .SYNOPSIS
+        Retrieves the available Intune role definitions
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Retrieves the available Intune role definitions
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the principal with the ability to list Intune role definitions
+
+    .EXAMPLE
+        C:\PS> $IntuneRoleDefinitions = Get-IntuneRoleDefinitions `
+            -Token $Token
+
+        Description
+        -----------
+        Uses the token from $Token to list the available Intune role definitions
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/intune-rbac-roledefinition-list?view=graph-rest-1.0&tabs=http
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    # Using the provided token, get the current list of available Intune definitions
+    $IntuneRoleDefinitions = $null
+    $URI = 'https://graph.microsoft.com/beta/deviceManagement/roleDefinitions'
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $IntuneRoleDefinitions += $Results.value
+        } else {
+            $IntuneRoleDefinitions += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $IntuneRoleDefinitions
+}
+New-Variable -Name 'Get-IntuneRoleDefinitionsDefinition' -Value (Get-Command -Name "Get-IntuneRoleDefinitions") -Force
+New-Variable -Name 'Get-IntuneRoleDefinitionsAst' -Value (${Get-IntuneRoleDefinitionsDefinition}.ScriptBlock.Ast.Body) -Force
+
+Function Get-IntuneManagedDevices {
+    <#
+    .SYNOPSIS
+        Retrieves Intune-managed device objects
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Retrieves Intune-managed device objects
+
+    .PARAMETER Token
+        The MS Graph-scoped JWT for the principal with the ability to list Intune devices
+
+    .EXAMPLE
+        C:\PS> $IntuneManagedDevices = Get-IntuneManagedDevices `
+            -Token $Token
+
+        Description
+        -----------
+        Uses the token from $Token to list Intune-managed devices
+
+    .LINK
+        https://learn.microsoft.com/en-us/graph/api/intune-devices-manageddevice-list?view=graph-rest-1.0
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+    )
+
+    # Using the provided token, list all Intune managed devices
+    $URI = 'https://graph.microsoft.com/beta/deviceManagement/managedDevices'
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $IntuneManagedDevices += $Results.value
+        } else {
+            $IntuneManagedDevices += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $IntuneManagedDevices
+
+}
+
 ## ########################### ##
 ## Entra Enumeration Functions ##
 ## ########################### ##
