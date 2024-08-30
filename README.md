@@ -71,7 +71,7 @@ Token Management and Manipulation Functions
 * ``Get-ARMTokenWithRefreshToken`` requests an AzureRM-scoped JWT with a user-supplied refresh token.
 * ``Get-AzurePortalTokenWithRefreshToken`` requests an Azure Portal Auth Refresh token with a user-supplied refresh token.
 
-The refresh token-based functions in BARK are based on functions in [https://github.com/rvrsh3ll/TokenTactics](TokenTactics) by [https://twitter.com/424f424f](Steve Borosh)
+The refresh token-based functions in BARK are based on functions in [TokenTactics](https://github.com/rvrsh3ll/TokenTactics) by [Steve Borosh](https://twitter.com/424f424f)
 
 Abuse Functions
 ---------------
