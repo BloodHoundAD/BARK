@@ -54,9 +54,9 @@ The resulting object you just created, `$MyRefreshTokenRequest`, will have as pa
     
 Now this new object, `$MyMSGraphToken`, will have as one of its property values an MS Graph-scoped JWT for your user. You are now ready to use this token to list all the users in the Entra tenant:
 
-    $MyAADUsers = Get-AllEntraUsers -Token $MyMSGraphToken.access_token -ShowProgress
+    $MyUsers = Get-AllEntraUsers -Token $MyMSGraphToken.access_token -ShowProgress
     
-Once finished, the `$MyAADUsers` variable will be populated by objects representing all of the users in your Entra tenant.
+Once finished, the `$MyEntraUsers` variable will be populated by objects representing all of the users in your Entra tenant.
 
 Token Management and Manipulation Functions
 -------------------------------------------
@@ -103,7 +103,7 @@ Meta Functions
 * ``New-TestSP`` creates a new service principal and associates it with the app created by the above function.
 * ``Test-MGAddSelfAsOwnerOfApp`` is used in abuse validation testing to determine whether a service principal with a particular privilege can grant itself ownership of an existing Entra app.
 * ``Test-MGAddSelfAsOwnerOfSP`` is used in abuse validation testing to determine whether a service principal with a particular privilege can grant itself ownership of an existing Entra service principal.
-* ``Test-MGAddSelfToAADRole`` is used in abuse validation testing to determine whether a service principal with a particular privilege can add itself to an Entra admin role - Global Admin, for example.
+* ``Test-MGAddSelfToEntraRole`` is used in abuse validation testing to determine whether a service principal with a particular privilege can add itself to an Entra admin role - Global Admin, for example.
 * ``Test-MGAddSelfToMGAppRole``is used in abuse validation testing to determine whether a service principal with a particular privilege can grant itself a particular MS Graph app role without admin consent.
 * ``Test-MGAddOwnerToRoleEligibleGroup`` is used to test whether a service principal can grant itself explicit ownership of a role assignable group.
 * ``Test-MGAddMemberToRoleEligibleGroup`` is used to test whether the service principal can add itself to a role assignable group.
