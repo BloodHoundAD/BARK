@@ -13,10 +13,10 @@ Primary author:
 Andy Robbins [@_wald0](https://twitter.com/@_wald0)
 
 Contributors:
-Jonas Bülow Knudsen [@Jonas_B_K](https://twitter.com/Jonas_B_K)
-Fabian Bader [@fabian_bader](https://twitter.com/fabian_bader)
-CravateRouge [@CravateRouge](@https://github.com/CravateRouge)
-g60ocR [@g60ocR](https://github.com/g60ocR)
+- Jonas Bülow Knudsen [@Jonas_B_K](https://twitter.com/Jonas_B_K)
+- Fabian Bader [@fabian_bader](https://twitter.com/fabian_bader)
+- CravateRouge [@CravateRouge](https://github.com/CravateRouge)
+- g60ocR [@g60ocR](https://github.com/g60ocR)
 
 Getting Started
 ---------------
