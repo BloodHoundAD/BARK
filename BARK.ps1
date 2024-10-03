@@ -7124,7 +7124,7 @@ Function Test-AzureRMCreateFunction {
 New-Variable -Name 'Test-AzureRMCreateFunctionDefinition' -Value (Get-Command -Name "Test-AzureRMCreateFunction") -Force
 New-Variable -Name 'Test-AzureRMCreateFunctionAst' -Value (${Test-AzureRMCreateFunctionDefinition}.ScriptBlock.Ast.Body) -Force
 
-function Invoke-AzureRMAbuseTests {
+function Invoke-AllAzureRMAbuseTests {
     <#
     .SYNOPSIS
         Performs all AzureRM abuse tests, or specified tests against AzureRM objects if specfied with AbuseTestType switch
@@ -7155,7 +7155,7 @@ function Invoke-AzureRMAbuseTests {
         The ID of the target subscription
 
     .EXAMPLE
-        C:\PS> Invoke-AzureRMAbuseTests `
+        C:\PS> Invoke-AllAzureRMAbuseTests `
             -GlobalAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
             -GlobalAdminSecret "<secret>" `
             -UserAccessAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
@@ -7168,7 +7168,7 @@ function Invoke-AzureRMAbuseTests {
         Perform all abuse tests, determines which available roles are able to perform all known abuse primitives
 
     .EXAMPLE
-        C:\PS> Invoke-AzureRMAbuseTests `
+        C:\PS> Invoke-AllAzureRMAbuseTests `
             -GlobalAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
             -GlobalAdminSecret "<secret>" `
             -UserAccessAdminClientID "76add5b8-33fe-4f8f-8afe-8b75ddfaa7ae" `
