@@ -1852,7 +1852,7 @@ Function Get-EntraAppOwner {
         
     )
 
-    $URI = "https://graph.microsoft.com/v1.0/servicePrincipals/$($AppObjectID)/owners"
+    $URI = "https://graph.microsoft.com/v1.0/applications/$($AppObjectID)/owners"
     $Results = $null
     $AppOwners = $null
     do {
@@ -6373,8 +6373,6 @@ Function Get-EntraTierZeroServicePrincipals {
             -ContentType "application/json"
         if ($Results.value) {
             $GlobalAdmins += $Results.value
-        } else {
-            $GlobalAdmins += $Results
         }
         $uri = $Results.'@odata.nextlink'
     } until (!($uri))
@@ -6393,8 +6391,6 @@ Function Get-EntraTierZeroServicePrincipals {
             -ContentType "application/json"
         if ($Results.value) {
             $PrivRoleAdmins += $Results.value
-        } else {
-            $PrivRoleAdmins += $Results
         }
         $uri = $Results.'@odata.nextlink'
     } until (!($uri))
@@ -6413,8 +6409,6 @@ Function Get-EntraTierZeroServicePrincipals {
             -ContentType "application/json"
         if ($Results.value) {
             $PrivAuthAdmins += $Results.value
-        } else {
-            $PrivAuthAdmins += $Results
         }
         $uri = $Results.'@odata.nextlink'
     } until (!($uri))
@@ -6433,8 +6427,6 @@ Function Get-EntraTierZeroServicePrincipals {
             -ContentType "application/json"
         if ($Results.value) {
             $PartnerTier2Support += $Results.value
-        } else {
-            $PartnerTier2Support += $Results
         }
         $uri = $Results.'@odata.nextlink'
     } until (!($uri))
@@ -6462,8 +6454,6 @@ Function Get-EntraTierZeroServicePrincipals {
             -ContentType "application/json"
         if ($Results.value) {
             $MGAppRoles += $Results.value
-        } else {
-            $MGAppRoles += $Results
         }
         $uri = $Results.'@odata.nextlink'
     } until (!($uri))
