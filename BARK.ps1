@@ -6340,7 +6340,7 @@ Function Get-EntraTierZeroServicePrincipals {
         A MS Graph scoped JWT for a user with the ability to read Entra and MS Graph app role assignments
     
     .EXAMPLE
-    C:\PS> Get-TierZeroServicePrincipals -Token $Token
+    C:\PS> Get-EntraTierZeroServicePrincipals -Token $Token
     
     Description
     -----------
