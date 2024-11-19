@@ -3794,6 +3794,81 @@ Function Get-AzureRMKeyVaultKeys {
     $KeyVaultKeys
 }
 
+Function Get-AzureRMKeyVaultKeyVersions {
+    <#
+    .SYNOPSIS
+        Gets all versions of a specified Key Vault key.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Gets all versions of a specified Key Vault key.
+
+    .PARAMETER KeyVaultKeyID
+        The URL of the target Key Vault key
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to read
+        keys from the specified vault
+
+    .EXAMPLE
+        C:\PS> Get-AzureRMKeyVaultKeyVersions `
+            -KeyVaultKeyID "https://keyvault-01.vault.azure.net/secrets/My-Key" `
+            -Token $Token
+
+        Description
+        -----------
+        List the versions for the "My-Key" key within the "keyvault-01" vault
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/rest/api/keyvault/keys/get-key-versions/get-key-versions?view=rest-keyvault-keys-7.4&tabs=HTTP
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultKeyID,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $URI = "$($KeyVaultKeyID)/versions?api-version=7.0"
+
+    do {
+        $Results = Invoke-RestMethod `
+            -Headers @{
+                Authorization = "Bearer $($Token)"
+            } `
+            -URI $URI `
+            -UseBasicParsing `
+            -Method "GET" `
+            -ContentType "application/json"
+        if ($Results.value) {
+            $KeyVaultKeyVersions += $Results.value
+        } else {
+            $KeyVaultKeyVersions += $Results
+        }
+        $uri = $Results.'@odata.nextlink'
+    } until (!($uri))
+
+    $KeyVaultKeyVersions
+}
+
 Function Get-AzureRMKeyVaultCertificates {
     <#
     .SYNOPSIS
