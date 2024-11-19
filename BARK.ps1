@@ -4689,6 +4689,316 @@ Function Get-AllAzureRMAKSClusters {
     $AKSClusterObjects
 }
 
+## ####################################### ##
+## Azure Key Vault Crytopgraphic Functions ##
+## ####################################### ##
+
+Function Protect-StringWithAzureKeyVaultKey {
+    <#
+    .SYNOPSIS
+        Encrypts a user-supplied string by forming a request to the Azure Key Vault API.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Encrypts a user-supplied string by forming a request to the Azure Key Vault API.
+
+    .PARAMETER InputString
+        The string you want to encrypt
+
+    .PARAMETER KeyVaultURL
+        The URL of the target Key Vault
+
+    .PARAMETER KeyName
+        The name of the key within the target Key Vault
+
+    .PARAMETER KeyVersion
+        The version of the key you want to perform the "encrypt" action with
+
+    .PARAMETER EncryptionAlgorithm
+        The JsonWebKeyEncryptionAlgorithm you want to encrypt the string with
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to perform the "encrypt"
+        action against the specified key
+
+    .EXAMPLE
+        C:\PS> Protect-StringWithAzureKeyVaultKey `
+            -InputString "HelloWorld" `
+            -KeyVaultURL "https://keyvault-01.vault.azure.net" `
+            -KeyName "MyKey" `
+            -KeyVersion "5286277fc7d24293a8fe4119f9781804" `
+            -EncryptionAlgorithm "RSA-OAEP" `
+            -Token $KVToken
+
+        Description
+        -----------
+        Encrypt "HelloWorld" using the private key associated with the key named "MyKey", specifically the
+        version of that key, "5286277fc7d24293a8fe4119f9781804", where "MyKey" resides in a key vault with
+        a URL of "https://keyvault-01.vault.azure.net". Returns either an error or the encrypted string.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/rest/api/keyvault/keys/encrypt/encrypt?view=rest-keyvault-keys-7.4&tabs=HTTP
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $InputString,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultURL,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyName,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVersion,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [ValidateSet(
+            "A128CBC",
+            "A128CBCPAD",
+            "A128GCM",
+            "A128KW",
+            "A192CBC",
+            "A192CBCPAD",
+            "A192GCM",
+            "A192KW",
+            "A256CBC",
+            "A256CBCPAD",
+            "A256GCM",
+            "A256KW",
+            "RSA-OAEP",
+            "RSA-OAEP-256",
+            "RSA1_5",
+            ErrorMessage="Not a valid encryption algorithm."
+        )]
+        [String]
+        $EncryptionAlgorithm,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    $plaintext = $InputString
+    $plaintextBytes = [System.Text.Encoding]::UTF8.GetBytes($plaintext)
+    $base64Plaintext = [Convert]::ToBase64String($plaintextBytes)
+
+    $encryptionRequestBody = @{
+        alg = $EncryptionAlgorithm
+        value = $base64Plaintext
+    } | ConvertTo-Json
+
+    # Perform the encryption request
+    Try {
+        $encryptionResponse = Invoke-RestMethod `
+            -Uri "$($KeyVaultURL)/keys/$($KeyName)/$($KeyVersion)/encrypt?api-version=7.4" `
+            -Method Post `
+            -Headers @{
+                "Authorization" = "Bearer $($Token)"
+            } `
+            -Body $encryptionRequestBody `
+            -ContentType "application/json"
+        $encryptionResponse.value
+    }
+    Catch {
+        $_
+    }
+}
+
+Function Unprotect-StringWithAzureKeyVaultKey {
+    <#
+    .SYNOPSIS
+        Decrypts a user-supplied string by forming a request to the Azure Key Vault API.
+
+        Author: Andy Robbins (@_wald0)
+        License: GPLv3
+        Required Dependencies: None
+
+    .DESCRIPTION
+        Decrypts a user-supplied string by forming a request to the Azure Key Vault API.
+
+    .PARAMETER InputString
+        The string you want to decrypt
+
+    .PARAMETER KeyVaultURL
+        The URL of the target Key Vault
+
+    .PARAMETER KeyName
+        The name of the key within the target Key Vault
+
+    .PARAMETER KeyVersion
+        The version of the key you want to perform the "decrypt" action with
+
+    .PARAMETER EncryptionAlgorithm
+        The JsonWebKeyEncryptionAlgorithm the input string is encrypted with
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to perform the "decrypt"
+        action with the specified key
+
+    .EXAMPLE
+        C:\PS> Unprotect-StringWithAzureKeyVaultKey `
+            -InputString "HelloWorld" `
+            -KeyVaultURL "https://keyvault-01.vault.azure.net" `
+            -KeyName "MyKey" `
+            -KeyVersion "5286277fc7d24293a8fe4119f9781804" `
+            -EncryptionAlgorithm "RSA-OAEP" `
+            -Token $KVToken
+
+        Description
+        -----------
+        Decrypt the specified string, "YDQoqdSAmEnsYSL2SSJoa_0EmR", using the private key associated with
+        the key named "MyKey", specifically the version of that key, "5286277fc7d24293a8fe4119f9781804",
+        where "MyKey" resides in a key vault with a URL of "https://keyvault-01.vault.azure.net". Returns
+        either an error or the decrypted string.
+
+    .INPUTS
+        String
+
+    .LINK
+        https://learn.microsoft.com/en-us/rest/api/keyvault/keys/decrypt/decrypt?view=rest-keyvault-keys-7.4&tabs=HTTP
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $InputString,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVaultURL,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyName,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $KeyVersion,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [ValidateSet(
+            "A128CBC",
+            "A128CBCPAD",
+            "A128GCM",
+            "A128KW",
+            "A192CBC",
+            "A192CBCPAD",
+            "A192GCM",
+            "A192KW",
+            "A256CBC",
+            "A256CBCPAD",
+            "A256GCM",
+            "A256KW",
+            "RSA-OAEP",
+            "RSA-OAEP-256",
+            "RSA1_5",
+            ErrorMessage="Not a valid encryption algorithm."
+        )]
+        [String]
+        $EncryptionAlgorithm,
+
+        [Parameter(
+            Mandatory = $True,
+            ValueFromPipeline = $True,
+            ValueFromPipelineByPropertyName = $True
+        )]
+        [String]
+        $Token
+        
+    )
+
+    # Create the request body for decryption
+    $decryptionRequestBody = @{
+        alg   = $EncryptionAlgorithm
+        value = $InputString
+    } | ConvertTo-Json
+    
+    # Perform the decryption request
+    Try {
+        $decryptionResponse = Invoke-RestMethod `
+            -Uri "$($KeyVaultURL)/keys/$($KeyName)/$($KeyVersion)/decrypt?api-version=7.4" `
+            -Method Post `
+            -Headers @{
+                "Authorization" = "Bearer $($Token)"
+            } `
+            -Body $decryptionRequestBody `
+            -ContentType "application/json"
+        
+        $decryptedValue = $decryptionResponse.value
+        
+        $remainder = $decryptedValue.Length % 4
+        if ($remainder -ne 0) {
+            $paddedDecryptedValue = $decryptedValue.PadRight($decryptedValue.Length + (4 - $remainder), '=')
+        } else {
+            $paddedDecryptedValue = $decryptedValue
+        }
+        
+        $decryptedBytes = [Convert]::FromBase64String($paddedDecryptedValue)
+        $decryptedText = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+        
+        $decryptedText
+    }
+    Catch {
+        $_
+    }
+    
+}
+
 ## #################################################### ##
 ## Azure Resource Manager Object Manipulation Functions ##
 ## #################################################### ##
