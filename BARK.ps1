@@ -3942,7 +3942,85 @@ Function Get-AzureRMKeyVaultCertificates {
 
     $KeyVaultCertificates
 }
+Function Get-AzureRMKeyVaultCertificatesRevival {
+    <#
+    .SYNOPSIS
+        Lists deleted certificates from a specified key vault and restores a specified certificate.
 
+    .DESCRIPTION
+        This function lists deleted certificates from an Azure Key Vault and provides an option to recover a deleted certificate using its name.
+
+    .PARAMETER KeyVaultURL
+        The URL of the target Key Vault.
+
+    .PARAMETER Token
+        The Azure Key Vault service scoped JWT for a principal with the ability to list and recover deleted certificates.
+
+    .PARAMETER CertificateName
+        The name of the deleted certificate to recover. If not provided, only the list of deleted certificates is displayed.
+
+    .EXAMPLE
+        PS> Get-AzureRMKeyVaultCertificatesRevival `
+            -KeyVaultURL "https://keyvault-01.vault.azure.net" `
+            -Token $KVToken `
+            -CertificateName "MyDeletedCert"
+
+        Description
+        -----------
+        Recovers the deleted certificate named "MyDeletedCert" from the specified Key Vault.
+
+    .INPUTS
+        String
+
+    .OUTPUTS
+        List of deleted certificates or a success message upon recovery.
+
+    .LINK
+        https://learn.microsoft.com/en-us/rest/api/keyvault/certificates/recover-deleted-certificate/recover-deleted-certificate?tabs=HTTP
+    #>
+    [CmdletBinding()] Param (
+        [Parameter(Mandatory = $True)]
+        [String]
+        $KeyVaultURL,
+
+        [Parameter(Mandatory = $True)]
+        [String]
+        $Token,
+
+        [Parameter(Mandatory = $False)]
+        [String]
+        $CertificateName
+    )
+
+    $DeletedCertsURI = "$($KeyVaultURL)/deletedcertificates?api-version=7.4"
+    $RecoverURIBase = "$($KeyVaultURL)/deletedcertificates"
+
+    $DeletedCertificates = Invoke-RestMethod `
+        -Headers @{ Authorization = "Bearer $($Token)" } `
+        -URI $DeletedCertsURI `
+        -UseBasicParsing `
+        -Method "GET" `
+        -ContentType "application/json"
+
+    if (-not $CertificateName) {
+        return $DeletedCertificates.value
+    } else {
+
+        $RecoverURI = "$RecoverURIBase/$CertificateName/recover?api-version=7.4"
+        $Response = Invoke-RestMethod `
+            -Headers @{ Authorization = "Bearer $($Token)" } `
+            -URI $RecoverURI `
+            -UseBasicParsing `
+            -Method "POST" `
+            -ContentType "application/json"
+
+        if ($Response) {
+            Write-Output "Certificate '$CertificateName' has been successfully recovered."
+        } else {
+            Write-Error "Failed to recover the certificate '$CertificateName'."
+        }
+    }
+}
 Function Get-AllAzureManagedIdentityAssignments {
     <#
     .SYNOPSIS
