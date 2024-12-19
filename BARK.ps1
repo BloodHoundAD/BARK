@@ -3949,6 +3949,7 @@ Function Get-AzureRMKeyVaultCertificatesRevival {
 
     .DESCRIPTION
         This function lists deleted certificates from an Azure Key Vault and provides an option to recover a deleted certificate using its name.
+        Author: Amal Joy (@h0n3yb4dg3r)
 
     .PARAMETER KeyVaultURL
         The URL of the target Key Vault.
