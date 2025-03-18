@@ -3018,7 +3018,7 @@ Function Get-AllAzureRMSubscriptions {
         } else {
             $SubscriptionObjects += $Results
         }
-        $uri = $Results.'@odata.nextlink'
+        $uri = $Results.nextLink
     } until (!($uri))
 
     $SubscriptionObjects
